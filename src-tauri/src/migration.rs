@@ -179,55 +179,101 @@ pub async fn execute_migration(
         return Ok(());
     }
 
-    // Step 2: Transfer objects
-    let target_prefix = target.prefix.as_deref().unwrap_or("").trim();
-    let source_prefix = source.prefix.as_deref().unwrap_or("").trim();
+    // Step 2: Concurrent Multi-Worker Pool (16 concurrent tasks)
+    use std::sync::atomic::{AtomicU64, AtomicUsize};
+    use tokio::sync::Semaphore;
+
+    let target_prefix = target.prefix.as_deref().unwrap_or("").trim().to_string();
+    let source_prefix = source.prefix.as_deref().unwrap_or("").trim().to_string();
+
+    let concurrency_limit = 20; // 20 concurrent cloud copy workers
+    emit_log(
+        &app,
+        "info",
+        &format!("⚡ Launching high-speed concurrent pool with {} parallel workers...", concurrency_limit),
+    );
+
+    let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+    let worker_seq = Arc::new(AtomicUsize::new(0));
+
+    let copied_files = Arc::new(AtomicU64::new(0));
+    let skipped_files = Arc::new(AtomicU64::new(0));
+    let failed_files = Arc::new(AtomicU64::new(0));
+    let copied_bytes = Arc::new(AtomicU64::new(0));
+
+    let source_client = Arc::new(source_client);
+    let target_client = Arc::new(target_client);
+    let source_bucket = Arc::new(source.bucket_name.clone());
+    let target_bucket = Arc::new(target.bucket_name.clone());
+
+    let mut handles = Vec::with_capacity(objects.len());
 
     for obj in objects {
         if cancel_flag.load(Ordering::Relaxed) {
             emit_log(&app, "warn", "Migration cancelled by user.");
-            progress.status = "cancelled".to_string();
-            emit_progress(&app, &progress);
-            return Ok(());
+            break;
         }
 
-        // Calculate target key
-        let target_key = if !target_prefix.is_empty() {
-            if !source_prefix.is_empty() && obj.key.starts_with(source_prefix) {
-                let relative = obj.key.strip_prefix(source_prefix).unwrap_or(&obj.key);
-                let rel_clean = relative.trim_start_matches('/');
-                let tgt_clean = target_prefix.trim_end_matches('/');
-                format!("{}/{}", tgt_clean, rel_clean)
-            } else {
-                let tgt_clean = target_prefix.trim_end_matches('/');
-                let key_clean = obj.key.trim_start_matches('/');
-                format!("{}/{}", tgt_clean, key_clean)
-            }
-        } else {
-            obj.key.clone()
+        let permit = match semaphore.clone().acquire_owned().await {
+            Ok(p) => p,
+            Err(_) => break,
         };
 
-        progress.current_file = obj.key.clone();
-        emit_progress(&app, &progress);
+        let app_clone = app.clone();
+        let cancel_clone = cancel_flag.clone();
+        let s_client = source_client.clone();
+        let t_client = target_client.clone();
+        let s_bucket = source_bucket.clone();
+        let t_bucket = target_bucket.clone();
+        let t_prefix = target_prefix.clone();
+        let s_prefix = source_prefix.clone();
 
-        // Check conflict strategy
-        let mut skip_file = false;
-        if strategy != ConflictStrategy::AlwaysOverwrite {
-            match target_client
-                .head_object()
-                .bucket(&target.bucket_name)
-                .key(&target_key)
-                .send()
-                .await
-            {
-                Ok(head_resp) => {
+        let c_files = copied_files.clone();
+        let s_files = skipped_files.clone();
+        let f_files = failed_files.clone();
+        let c_bytes = copied_bytes.clone();
+
+        let total_f = progress.total_files;
+        let total_b = progress.total_bytes;
+        let w_seq = worker_seq.clone();
+
+        let handle = tokio::spawn(async move {
+            let _permit = permit;
+            if cancel_clone.load(Ordering::Relaxed) {
+                return;
+            }
+
+            let worker_id = (w_seq.fetch_add(1, Ordering::Relaxed) % concurrency_limit) + 1;
+            let worker_tag = format!("[Worker #{:02}]", worker_id);
+
+            // Calculate target key
+            let target_key = if !t_prefix.is_empty() {
+                if !s_prefix.is_empty() && obj.key.starts_with(&s_prefix) {
+                    let relative = obj.key.strip_prefix(&s_prefix).unwrap_or(&obj.key);
+                    let rel_clean = relative.trim_start_matches('/');
+                    let tgt_clean = t_prefix.trim_end_matches('/');
+                    format!("{}/{}", tgt_clean, rel_clean)
+                } else {
+                    let tgt_clean = t_prefix.trim_end_matches('/');
+                    let key_clean = obj.key.trim_start_matches('/');
+                    format!("{}/{}", tgt_clean, key_clean)
+                }
+            } else {
+                obj.key.clone()
+            };
+
+            // Check conflict strategy
+            let mut skip_file = false;
+            if strategy != ConflictStrategy::AlwaysOverwrite {
+                if let Ok(head_resp) = t_client
+                    .head_object()
+                    .bucket(&*t_bucket)
+                    .key(&target_key)
+                    .send()
+                    .await
+                {
                     if strategy == ConflictStrategy::IgnoreExisting {
                         skip_file = true;
-                        emit_log(
-                            &app,
-                            "info",
-                            &format!("[SKIP] '{}' already exists on target (strategy: Ignore)", target_key),
-                        );
                     } else if strategy == ConflictStrategy::ReplaceIfDifferent {
                         let target_size = head_resp.content_length.unwrap_or(0);
                         let target_etag = head_resp.e_tag.map(|t| t.trim_matches('"').to_string());
@@ -240,115 +286,166 @@ pub async fn execute_migration(
 
                         if size_matches && etag_matches {
                             skip_file = true;
-                            emit_log(
-                                &app,
-                                "info",
-                                &format!("[SKIP] '{}' checksum & size match on target", target_key),
-                            );
                         }
                     }
                 }
-                Err(_) => {
-                    // Object doesn't exist on target, proceed with copy
-                }
             }
-        }
 
-        if skip_file {
-            progress.skipped_files += 1;
-            emit_progress(&app, &progress);
-            continue;
-        }
+            if skip_file {
+                let s_count = s_files.fetch_add(1, Ordering::Relaxed) + 1;
+                emit_log(
+                    &app_clone,
+                    "info",
+                    &format!("{} [SKIP] '{}' checksum/size match", worker_tag, target_key),
+                );
+                let c_count = c_files.load(Ordering::Relaxed);
+                let f_count = f_files.load(Ordering::Relaxed);
+                let b_count = c_bytes.load(Ordering::Relaxed);
 
-        // Perform transfer
-        let transfer_result: Result<(), String> = if is_same_host {
-            // Server-Side Copy: CopySource = "{bucket}/{key}"
-            let encoded_key = urlencoding::encode(&obj.key);
-            let copy_source = format!("{}/{}", source.bucket_name, encoded_key);
+                emit_progress(
+                    &app_clone,
+                    &ProgressEvent {
+                        transfer_mode: if is_same_host { "server_side_copy" } else { "client_streaming" }.to_string(),
+                        copied_files: c_count,
+                        skipped_files: s_count,
+                        failed_files: f_count,
+                        total_files: total_f,
+                        copied_bytes: b_count,
+                        total_bytes: total_b,
+                        current_file: format!("{} Skipped {}", worker_tag, obj.key),
+                        status: "transferring".to_string(),
+                    },
+                );
+                return;
+            }
 
-            match target_client
-                .copy_object()
-                .bucket(&target.bucket_name)
-                .key(&target_key)
-                .copy_source(&copy_source)
-                .send()
-                .await
-            {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    // Fallback to client streaming if server-side copy failed (e.g. cross-account permission)
-                    emit_log(
-                        &app,
-                        "warn",
-                        &format!("Server-side copy failed for '{}', falling back to stream: {:?}", obj.key, e),
-                    );
-                    stream_copy(
-                        &source_client,
-                        &target_client,
-                        &source.bucket_name,
-                        &obj.key,
-                        &target.bucket_name,
-                        &target_key,
-                        obj.size,
-                    )
+            // Perform transfer
+            let transfer_result: Result<(), String> = if is_same_host {
+                let encoded_key = urlencoding::encode(&obj.key);
+                let copy_source = format!("{}/{}", s_bucket, encoded_key);
+
+                match t_client
+                    .copy_object()
+                    .bucket(&*t_bucket)
+                    .key(&target_key)
+                    .copy_source(&copy_source)
+                    .send()
                     .await
+                {
+                    Ok(_) => Ok(()),
+                    Err(_) => {
+                        // Fallback to streaming if server copy fails
+                        stream_copy(&s_client, &t_client, &s_bucket, &obj.key, &t_bucket, &target_key, obj.size).await
+                    }
+                }
+            } else {
+                stream_copy(&s_client, &t_client, &s_bucket, &obj.key, &t_bucket, &target_key, obj.size).await
+            };
+
+            match transfer_result {
+                Ok(_) => {
+                    let c_count = c_files.fetch_add(1, Ordering::Relaxed) + 1;
+                    let b_count = c_bytes.fetch_add(obj.size.max(0) as u64, Ordering::Relaxed) + obj.size.max(0) as u64;
+                    let s_count = s_files.load(Ordering::Relaxed);
+                    let f_count = f_files.load(Ordering::Relaxed);
+
+                    emit_log(
+                        &app_clone,
+                        "success",
+                        &format!(
+                            "{} [OK] {} ({:.1} KB) -> {}",
+                            worker_tag,
+                            obj.key,
+                            obj.size as f64 / 1024.0,
+                            target_key
+                        ),
+                    );
+
+                    emit_progress(
+                        &app_clone,
+                        &ProgressEvent {
+                            transfer_mode: if is_same_host { "server_side_copy" } else { "client_streaming" }.to_string(),
+                            copied_files: c_count,
+                            skipped_files: s_count,
+                            failed_files: f_count,
+                            total_files: total_f,
+                            copied_bytes: b_count,
+                            total_bytes: total_b,
+                            current_file: format!("{} Copied {}", worker_tag, obj.key),
+                            status: "transferring".to_string(),
+                        },
+                    );
+                }
+                Err(err) => {
+                    let f_count = f_files.fetch_add(1, Ordering::Relaxed) + 1;
+                    let c_count = c_files.load(Ordering::Relaxed);
+                    let s_count = s_files.load(Ordering::Relaxed);
+                    let b_count = c_bytes.load(Ordering::Relaxed);
+
+                    emit_log(
+                        &app_clone,
+                        "error",
+                        &format!("{} [FAIL] {} -> {}: {}", worker_tag, obj.key, target_key, err),
+                    );
+
+                    emit_progress(
+                        &app_clone,
+                        &ProgressEvent {
+                            transfer_mode: if is_same_host { "server_side_copy" } else { "client_streaming" }.to_string(),
+                            copied_files: c_count,
+                            skipped_files: s_count,
+                            failed_files: f_count,
+                            total_files: total_f,
+                            copied_bytes: b_count,
+                            total_bytes: total_b,
+                            current_file: format!("{} Failed {}", worker_tag, obj.key),
+                            status: "transferring".to_string(),
+                        },
+                    );
                 }
             }
-        } else {
-            // Client Streaming Relay
-            stream_copy(
-                &source_client,
-                &target_client,
-                &source.bucket_name,
-                &obj.key,
-                &target.bucket_name,
-                &target_key,
-                obj.size,
-            )
-            .await
-        };
+        });
 
-        match transfer_result {
-            Ok(_) => {
-                progress.copied_files += 1;
-                progress.copied_bytes += obj.size.max(0) as u64;
-                emit_log(
-                    &app,
-                    "success",
-                    &format!(
-                        "[OK] {} ({:.1} KB) -> {}",
-                        obj.key,
-                        obj.size as f64 / 1024.0,
-                        target_key
-                    ),
-                );
-            }
-            Err(err) => {
-                progress.failed_files += 1;
-                emit_log(
-                    &app,
-                    "error",
-                    &format!("[FAIL] {} -> {}: {}", obj.key, target_key, err),
-                );
-            }
-        }
-
-        emit_progress(&app, &progress);
+        handles.push(handle);
     }
 
-    progress.status = "completed".to_string();
-    progress.current_file = "Migration completed".to_string();
-    emit_progress(&app, &progress);
+    // Wait for all concurrent worker tasks to finish
+    for handle in handles {
+        let _ = handle.await;
+    }
+
+    let final_copied = copied_files.load(Ordering::Relaxed);
+    let final_skipped = skipped_files.load(Ordering::Relaxed);
+    let final_failed = failed_files.load(Ordering::Relaxed);
+    let final_bytes = copied_bytes.load(Ordering::Relaxed);
+
+    let is_cancelled = cancel_flag.load(Ordering::Relaxed);
+    let final_status = if is_cancelled { "cancelled" } else { "completed" };
+
+    emit_progress(
+        &app,
+        &ProgressEvent {
+            transfer_mode: if is_same_host { "server_side_copy" } else { "client_streaming" }.to_string(),
+            copied_files: final_copied,
+            skipped_files: final_skipped,
+            failed_files: final_failed,
+            total_files: progress.total_files,
+            copied_bytes: final_bytes,
+            total_bytes: progress.total_bytes,
+            current_file: if is_cancelled { "Migration cancelled".to_string() } else { "Migration completed".to_string() },
+            status: final_status.to_string(),
+        },
+    );
 
     emit_log(
         &app,
-        "success",
+        if is_cancelled { "warn" } else { "success" },
         &format!(
             "🎉 Migration Finished! Copied: {}, Skipped: {}, Failed: {}. Total size: {:.2} MB.",
-            progress.copied_files,
-            progress.skipped_files,
-            progress.failed_files,
-            progress.copied_bytes as f64 / (1024.0 * 1024.0)
+            final_copied,
+            final_skipped,
+            final_failed,
+            final_bytes as f64 / (1024.0 * 1024.0)
         ),
     );
 

@@ -50,6 +50,24 @@ export const LogConsole: React.FC<LogConsoleProps> = ({ logs, onClear }) => {
     }
   };
 
+  const renderMessageWithWorker = (message: string) => {
+    // Check if message has [Worker #XX]
+    const workerMatch = message.match(/^(\[Worker #\d+\])\s*(.*)/);
+    if (workerMatch) {
+      const workerTag = workerMatch[1];
+      const rest = workerMatch[2];
+      return (
+        <span className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.2 rounded bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
+            {workerTag}
+          </span>
+          <span>{rest}</span>
+        </span>
+      );
+    }
+    return <span>{message}</span>;
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-950/90 backdrop-blur-xl shadow-lg dark:shadow-2xl overflow-hidden flex flex-col flex-1 h-full min-h-0">
       {/* Console Header */}
@@ -119,7 +137,7 @@ export const LogConsole: React.FC<LogConsoleProps> = ({ logs, onClear }) => {
                     : "text-slate-800 dark:text-zinc-200"
                 }
               >
-                {log.message}
+                {renderMessageWithWorker(log.message)}
               </span>
             </div>
           ))
