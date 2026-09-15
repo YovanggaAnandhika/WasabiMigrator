@@ -1,0 +1,42 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "wasabi-migration",
+  "version": "0.1.0",
+  "identifier": "com.dkasystem.wasabimigration",
+  "build": {
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Wasabi & S3 Bucket Migration Tool",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 650,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}

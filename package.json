@@ -1,0 +1,38 @@
+{
+  "name": "wasabi-migration",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.46.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "packageManager": "bun@1.3.14",
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
+}
