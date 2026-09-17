@@ -24,6 +24,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
   isSameHost,
   isSameBucket = false,
+  isSourceVerified = false,
+  isTargetVerified = false,
   onStart,
   onCancel,
   isMigrating,
@@ -49,6 +51,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         progress={progress}
         isSameHost={isSameHost}
         isSameBucket={isSameBucket}
+        isSourceVerified={isSourceVerified}
+        isTargetVerified={isTargetVerified}
         isMigrating={isMigrating}
         disabled={disabled}
         onStart={onStart}

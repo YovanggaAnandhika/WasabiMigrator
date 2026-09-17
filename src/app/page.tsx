@@ -28,7 +28,7 @@ const ProfileManagerModal = dynamic(
   () => import("@/components/profiles").then((mod) => mod.ProfileManagerModal),
   { ssr: false }
 );
-import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent, ProfileRecord } from "@/lib/types";
+import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent, ProfileRecord, TestResult } from "@/lib/types";
 import {
   startMigration,
   cancelMigration,
@@ -73,6 +73,10 @@ export default function Home() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [sourceConfig, setSourceConfig] = useState<BucketConfig>(INITIAL_SOURCE);
   const [targetConfig, setTargetConfig] = useState<BucketConfig>(INITIAL_TARGET);
+  const [sourceTestResult, setSourceTestResult] = useState<TestResult | null>(null);
+  const [targetTestResult, setTargetTestResult] = useState<TestResult | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [targetError, setTargetError] = useState<string | null>(null);
   const [conflictStrategy, setConflictStrategy] = useState<ConflictStrategy>("ReplaceIfDifferent");
   const [concurrency, setConcurrency] = useState<number>(16);
   const [progress, setProgress] = useState<ProgressEvent>(INITIAL_PROGRESS);
@@ -83,6 +87,9 @@ export default function Home() {
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapCount, setSwapCount] = useState(0);
+
+  const isSourceVerified = Boolean(sourceTestResult?.success && !sourceError);
+  const isTargetVerified = Boolean(targetTestResult?.success && !targetError);
 
   // Load profiles from SQLite database on mount
   useEffect(() => {
@@ -96,6 +103,19 @@ export default function Home() {
     };
     loadStoredProfiles();
   }, []);
+
+  // Handle source and target config changes with verification reset
+  const handleSourceConfigChange = (newConfig: BucketConfig) => {
+    setSourceConfig(newConfig);
+    setSourceTestResult(null);
+    setSourceError(null);
+  };
+
+  const handleTargetConfigChange = (newConfig: BucketConfig) => {
+    setTargetConfig(newConfig);
+    setTargetTestResult(null);
+    setTargetError(null);
+  };
 
   // Handle profiles updated from SQLite modal
   const handleProfilesUpdated = (updatedList: ProfileRecord[]) => {
@@ -226,6 +246,10 @@ export default function Home() {
     setTimeout(() => {
       setSourceConfig(targetConfig);
       setTargetConfig(sourceConfig);
+      setSourceTestResult(targetTestResult);
+      setTargetTestResult(sourceTestResult);
+      setSourceError(targetError);
+      setTargetError(sourceError);
     }, 150);
 
     setTimeout(() => {
@@ -245,6 +269,10 @@ export default function Home() {
   const handleStartMigration = async () => {
     if (isSameBucket) {
       alert("Peringatan: Profil Source Bucket dan Destination Bucket sama! Harap pilih profil/bucket yang berbeda.");
+      return;
+    }
+    if (!isSourceVerified || !isTargetVerified) {
+      alert("Peringatan: Harap lakukan 'Test Connection' pada Source Bucket dan Destination Bucket terlebih dahulu dan pastikan keduanya berhasil (berstatus sukses/hijau)!");
       return;
     }
     if (!sourceConfig.bucket_name.trim() || !targetConfig.bucket_name.trim()) {
@@ -393,8 +421,14 @@ export default function Home() {
             title="Source Bucket"
             side="source"
             config={sourceConfig}
-            onChange={setSourceConfig}
+            onChange={handleSourceConfigChange}
             profiles={profiles}
+            testResult={sourceTestResult}
+            errorMessage={sourceError}
+            onTestResultChanged={(res, err) => {
+              setSourceTestResult(res);
+              setSourceError(err);
+            }}
             onLog={(level, message) => {
               setLogs((prev) => [
                 ...prev.slice(-499),
@@ -432,8 +466,14 @@ export default function Home() {
             title="Destination Bucket"
             side="target"
             config={targetConfig}
-            onChange={setTargetConfig}
+            onChange={handleTargetConfigChange}
             profiles={profiles}
+            testResult={targetTestResult}
+            errorMessage={targetError}
+            onTestResultChanged={(res, err) => {
+              setTargetTestResult(res);
+              setTargetError(err);
+            }}
             onLog={(level, message) => {
               setLogs((prev) => [
                 ...prev.slice(-499),
@@ -455,6 +495,8 @@ export default function Home() {
             progress={progress}
             isSameHost={isSameHost}
             isSameBucket={isSameBucket}
+            isSourceVerified={isSourceVerified}
+            isTargetVerified={isTargetVerified}
             onStart={handleStartMigration}
             onCancel={handleCancelMigration}
             isMigrating={isMigrating}

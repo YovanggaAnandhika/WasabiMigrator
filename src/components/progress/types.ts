@@ -4,6 +4,8 @@ export interface ProgressBarProps {
   progress: ProgressEvent;
   isSameHost: boolean;
   isSameBucket?: boolean;
+  isSourceVerified?: boolean;
+  isTargetVerified?: boolean;
   onStart: () => void;
   onCancel: () => void;
   isMigrating: boolean;

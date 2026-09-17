@@ -8,6 +8,8 @@ interface ProgressHeaderProps {
   progress: ProgressEvent;
   isSameHost: boolean;
   isSameBucket: boolean;
+  isSourceVerified: boolean;
+  isTargetVerified: boolean;
   isMigrating: boolean;
   disabled: boolean;
   onStart: () => void;
@@ -18,11 +20,15 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   progress,
   isSameHost,
   isSameBucket,
+  isSourceVerified,
+  isTargetVerified,
   isMigrating,
   disabled,
   onStart,
   onCancel,
 }) => {
+  const isBothVerified = isSourceVerified && isTargetVerified;
+
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-200 dark:border-zinc-800/80 pb-4">
       {/* Dynamic Mode Badge / Warning Badge */}
@@ -65,12 +71,25 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
               </div>
             </div>
           )
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-400">
-            <Radio className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+        ) : !isBothVerified ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+            <Radio className="h-4 w-4 text-amber-500 dark:text-amber-400" />
             <div>
               <span className="text-xs font-medium tracking-wide">
-                Mode Transfer: {isSameHost ? "Auto-Detect Server-Side Copy (Fallback to Stream)" : "Client Streaming Relay"}
+                {!isSourceVerified && !isTargetVerified
+                  ? "Wajib uji koneksi Source & Destination bucket sebelum migrasi"
+                  : !isSourceVerified
+                  ? "Wajib uji koneksi Source bucket berhasil terlebih dahulu"
+                  : "Wajib uji koneksi Destination bucket berhasil terlebih dahulu"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+            <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+            <div>
+              <span className="text-xs font-semibold tracking-wide">
+                Koneksi Terverifikasi: {isSameHost ? "Auto-Detect Server-Side Copy" : "Client Streaming Relay"} (Siap Mulai)
               </span>
             </div>
           </div>
@@ -82,9 +101,15 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
         {!isMigrating ? (
           <button
             type="button"
-            disabled={disabled || isSameBucket}
+            disabled={disabled || isSameBucket || !isBothVerified}
             onClick={onStart}
-            title={isSameBucket ? "Tidak bisa migrasi: Profil Source dan Destination sama" : undefined}
+            title={
+              isSameBucket
+                ? "Tidak bisa migrasi: Profil Source dan Destination sama"
+                : !isBothVerified
+                ? "Wajib lakukan 'Test Connection' dan pastikan berhasil pada kedua bucket"
+                : undefined
+            }
             className="flex-1 md:flex-initial flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed disabled:saturate-50"
           >
             <Play className="h-4 w-4 fill-white" />

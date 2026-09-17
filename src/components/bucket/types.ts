@@ -6,6 +6,9 @@ export interface BucketCardProps {
   config: BucketConfig;
   onChange: (newConfig: BucketConfig) => void;
   profiles?: ProfileRecord[];
+  testResult?: TestResult | null;
+  errorMessage?: string | null;
+  onTestResultChanged?: (result: TestResult | null, error: string | null) => void;
   onLog?: (level: "info" | "warn" | "error", message: string) => void;
   disabled?: boolean;
   className?: string;

@@ -33,13 +33,19 @@ export const BucketCard: React.FC<BucketCardProps> = ({
   config,
   onChange,
   profiles = [],
+  testResult: externalTestResult,
+  errorMessage: externalErrorMessage,
+  onTestResultChanged,
   onLog,
   disabled = false,
   className = "",
 }) => {
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [internalTestResult, setInternalTestResult] = useState<TestResult | null>(null);
+  const [internalErrorMessage, setInternalErrorMessage] = useState<string | null>(null);
+
+  const testResult = externalTestResult !== undefined ? externalTestResult : internalTestResult;
+  const errorMessage = externalErrorMessage !== undefined ? externalErrorMessage : internalErrorMessage;
 
   const isSource = side === "source";
   const badgeColor = isSource
@@ -48,8 +54,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
 
   const handleTest = async () => {
     setTesting(true);
-    setTestResult(null);
-    setErrorMessage(null);
+    setInternalTestResult(null);
+    setInternalErrorMessage(null);
+    if (onTestResultChanged) {
+      onTestResultChanged(null, null);
+    }
 
     const bucketLabel = isSource ? "Source" : "Destination";
     const bucketName = config.bucket_name || "(kosong)";
@@ -60,7 +69,10 @@ export const BucketCard: React.FC<BucketCardProps> = ({
 
     try {
       const res = await testBucketConnection(config);
-      setTestResult(res);
+      setInternalTestResult(res);
+      if (onTestResultChanged) {
+        onTestResultChanged(res, null);
+      }
       if (res.success) {
         if (onLog) {
           onLog("info", `✓ [Tes Koneksi ${bucketLabel}] Berhasil terhubung ke '${bucketName}'. Pesan: ${res.message}`);
@@ -72,7 +84,10 @@ export const BucketCard: React.FC<BucketCardProps> = ({
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(msg);
+      setInternalErrorMessage(msg);
+      if (onTestResultChanged) {
+        onTestResultChanged(null, msg);
+      }
       if (onLog) {
         onLog("error", `✗ [Tes Koneksi ${bucketLabel}] Error koneksi bucket '${bucketName}': ${msg}`);
       }
