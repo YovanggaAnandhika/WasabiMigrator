@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   Server,
   Key,
@@ -14,8 +14,6 @@ import {
   EyeOff,
   Radio,
   Globe,
-  FileDown,
-  Upload,
   Bookmark,
   Plus,
 } from "lucide-react";
@@ -33,14 +31,6 @@ interface BucketCardProps {
   className?: string;
 }
 
-const PRESETS = [
-  { label: "Wasabi SG", endpoint: "https://s3.ap-southeast-1.wasabisys.com", region: "ap-southeast-1" },
-  { label: "Wasabi US-East", endpoint: "https://s3.wasabisys.com", region: "us-east-1" },
-  { label: "Wasabi EU-Central", endpoint: "https://s3.eu-central-1.wasabisys.com", region: "eu-central-1" },
-  { label: "AWS S3", endpoint: "https://s3.amazonaws.com", region: "us-east-1" },
-  { label: "MinIO / Custom", endpoint: "http://localhost:9000", region: "us-east-1" },
-];
-
 export const BucketCard: React.FC<BucketCardProps> = ({
   title,
   side,
@@ -55,7 +45,6 @@ export const BucketCard: React.FC<BucketCardProps> = ({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSource = side === "source";
   const badgeColor = isSource
@@ -78,153 +67,8 @@ export const BucketCard: React.FC<BucketCardProps> = ({
     }
   };
 
-  const applyPreset = (preset: typeof PRESETS[0]) => {
-    onChange({
-      ...config,
-      endpoint_url: preset.endpoint,
-      region: preset.region,
-    });
-  };
-
-  // Export credentials to Wasabi / AWS standard CSV format
-  const handleExportCSV = () => {
-    const csvContent =
-      "User Name,Access key ID,Secret access key,Endpoint URL,Region,Bucket Name\n" +
-      `"admin","${config.access_key_id}","${config.secret_access_key}","${config.endpoint_url}","${config.region}","${config.bucket_name}"\n`;
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const filename = `${config.bucket_name || (isSource ? "source" : "target")}_wasabi_credentials.csv`;
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Import credentials from Wasabi / AWS CSV
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (!text) return;
-
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
-      if (lines.length === 0) {
-        alert("File CSV kosong.");
-        return;
-      }
-
-      // Helper to parse a delimited line handling quotes and commas/semicolons/tabs
-      const parseCSVLine = (line: string): string[] => {
-        // Check delimiter: comma, semicolon, or tab
-        let delimiter = ",";
-        if (line.includes(";") && !line.includes(",")) delimiter = ";";
-        else if (line.includes("\t")) delimiter = "\t";
-
-        const result: string[] = [];
-        let current = "";
-        let inQuotes = false;
-
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"' || char === "'") {
-            inQuotes = !inQuotes;
-          } else if (char === delimiter && !inQuotes) {
-            result.push(current.trim().replace(/^["']|["']$/g, ""));
-            current = "";
-          } else {
-            current += char;
-          }
-        }
-        result.push(current.trim().replace(/^["']|["']$/g, ""));
-        return result;
-      };
-
-      let accessKey = "";
-      let secretKey = "";
-      let endpoint = config.endpoint_url;
-      let region = config.region;
-      let bucketName = config.bucket_name;
-
-      // Handle Key=Value format or 2-row table format
-      if (lines.length === 1 && (lines[0].includes("=") || lines[0].includes(":"))) {
-        const parts = lines[0].split(/[;,]/);
-        for (const part of parts) {
-          const [k, v] = part.split(/[=:]/);
-          if (k && v) {
-            const keyLower = k.toLowerCase().trim();
-            const valClean = v.trim().replace(/^["']|["']$/g, "");
-            if (keyLower.includes("access") && !keyLower.includes("secret")) accessKey = valClean;
-            if (keyLower.includes("secret")) secretKey = valClean;
-          }
-        }
-      } else {
-        const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
-        const dataRows = lines.slice(1).map(parseCSVLine);
-        const firstData = dataRows[0] || [];
-
-        headers.forEach((h, idx) => {
-          const val = firstData[idx] || "";
-          if ((h.includes("access key") || h.includes("access_key") || h === "accesskeyid" || h === "accesskey") && !h.includes("secret")) {
-            accessKey = val;
-          } else if (h.includes("secret access key") || h.includes("secret_key") || h.includes("secret key") || h === "secretaccesskey" || h === "secretkey") {
-            secretKey = val;
-          } else if (h.includes("endpoint") || h.includes("host")) {
-            endpoint = val;
-          } else if (h.includes("region")) {
-            region = val;
-          } else if (h.includes("bucket")) {
-            bucketName = val;
-          }
-        });
-
-        // Fallback for headerless or standard Wasabi CSV (User Name, Access Key Id, Secret Access Key)
-        if (!accessKey && !secretKey) {
-          if (firstData.length >= 3) {
-            // Wasabi format: [User Name, Access Key Id, Secret Access Key]
-            accessKey = firstData[1];
-            secretKey = firstData[2];
-          } else if (firstData.length === 2) {
-            // [Access Key, Secret Key]
-            accessKey = firstData[0];
-            secretKey = firstData[1];
-          }
-        }
-      }
-
-      onChange({
-        ...config,
-        access_key_id: accessKey || config.access_key_id,
-        secret_access_key: secretKey || config.secret_access_key,
-        endpoint_url: endpoint || config.endpoint_url,
-        region: region || config.region,
-        bucket_name: bucketName || config.bucket_name,
-      });
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    };
-    reader.readAsText(file);
-  };
-
   return (
     <div className={`relative flex flex-col rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/70 backdrop-blur-xl p-5 shadow-lg dark:shadow-2xl transition-all duration-300 hover:border-slate-300 dark:hover:border-zinc-700/80 ${className}`}>
-      {/* Hidden file input for CSV Import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv,text/csv"
-        onChange={handleImportCSV}
-        className="hidden"
-      />
-
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800/80 pb-4">
         <div className="flex items-center gap-3">
@@ -248,35 +92,6 @@ export const BucketCard: React.FC<BucketCardProps> = ({
               {isSource ? "Bucket asal objek yang akan dipindahkan" : "Bucket tujuan tempat objek disimpan"}
             </p>
           </div>
-        </div>
-
-        {/* Actions: Presets & CSV Export/Import */}
-        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          {/* Export CSV button */}
-          <button
-            type="button"
-            disabled={disabled || !config.access_key_id}
-            onClick={handleExportCSV}
-            title="Export kredensial ke file CSV format Wasabi / AWS"
-            className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/70 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 shadow-xs transition disabled:opacity-40"
-          >
-            <FileDown className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-            <span>Export CSV</span>
-          </button>
-
-          <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 dark:text-zinc-400 mx-1">|</span>
-
-          {PRESETS.slice(0, 3).map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              disabled={disabled}
-              onClick={() => applyPreset(p)}
-              className="text-[11px] px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-800 bg-slate-100 dark:bg-zinc-800/50 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 transition disabled:opacity-50"
-            >
-              {p.label}
-            </button>
-          ))}
         </div>
       </div>
 

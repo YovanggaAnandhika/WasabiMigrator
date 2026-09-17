@@ -23,6 +23,7 @@ import {
   Folder,
   Upload,
   FileUp,
+  FileDown,
 } from "lucide-react";
 import { ProfileInput, ProfileRecord, TestResult } from "@/lib/types";
 import {
@@ -381,6 +382,29 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     reader.readAsText(file);
   };
 
+  // Export specific profile or current form data to CSV
+  const handleExportProfileCSV = (profile: ProfileRecord | ProfileInput) => {
+    if (!profile.access_key_id) {
+      alert("Profil ini belum memiliki Access Key ID untuk diexport.");
+      return;
+    }
+
+    const csvContent =
+      "User Name,Access key ID,Secret access key,Endpoint URL,Region,Bucket Name\n" +
+      `"${profile.name}","${profile.access_key_id}","${profile.secret_access_key}","${profile.endpoint_url}","${profile.region}","${profile.bucket_name || ""}"\n`;
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeName = (profile.name || "wasabi_profile").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${safeName}_credentials.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus profil '${name}' dari SQLite database?`)) {
       return;
@@ -559,17 +583,30 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(p.id, p.name);
-                          }}
-                          title="Hapus profil dari database"
-                          className="text-slate-400 hover:text-red-500 p-1 rounded transition"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportProfileCSV(p);
+                            }}
+                            title="Export profil ini ke file CSV"
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                          >
+                            <FileDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(p.id, p.name);
+                            }}
+                            title="Hapus profil dari database"
+                            className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -798,6 +835,17 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                   >
                     {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" /> : <Radio className="h-3.5 w-3.5 text-blue-500" />}
                     <span>{testing ? "Menguji..." : "Test Connection"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!formData.access_key_id}
+                    onClick={() => handleExportProfileCSV(formData)}
+                    title="Export kredensial yang sedang diedit ke file CSV"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold shadow-sm transition disabled:opacity-40"
+                  >
+                    <FileDown className="h-3.5 w-3.5 text-blue-500" />
+                    <span>Export CSV</span>
                   </button>
                 </div>
 
