@@ -3,10 +3,26 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeftRight, HardDriveDownload, ShieldCheck, Sparkles, Moon, Sun, Settings, Database, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import { BucketCard } from "@/components/BucketCard";
-import { ConflictSettings } from "@/components/ConflictSettings";
-import { ProgressBar } from "@/components/ProgressBar";
-import { LogConsole } from "@/components/LogConsole";
+
+const BucketCard = dynamic(
+  () => import("@/components/bucket").then((mod) => mod.BucketCard),
+  { ssr: false }
+);
+
+const ConflictSettings = dynamic(
+  () => import("@/components/conflict").then((mod) => mod.ConflictSettings),
+  { ssr: false }
+);
+
+const ProgressBar = dynamic(
+  () => import("@/components/progress").then((mod) => mod.ProgressBar),
+  { ssr: false }
+);
+
+const LogConsole = dynamic(
+  () => import("@/components/logs").then((mod) => mod.LogConsole),
+  { ssr: false }
+);
 
 const ProfileManagerModal = dynamic(
   () => import("@/components/profiles").then((mod) => mod.ProfileManagerModal),
