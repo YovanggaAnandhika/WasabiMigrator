@@ -113,8 +113,8 @@ export const BucketCard: React.FC<BucketCardProps> = ({
                   region: selected.region,
                   access_key_id: selected.access_key_id,
                   secret_access_key: selected.secret_access_key,
-                  bucket_name: selected.bucket_name || config.bucket_name,
-                  prefix: selected.prefix || config.prefix,
+                  bucket_name: selected.bucket_name,
+                  prefix: selected.prefix,
                   use_path_style: selected.use_path_style,
                 });
               }
@@ -221,21 +221,20 @@ export const BucketCard: React.FC<BucketCardProps> = ({
           </div>
         </div>
 
-        {/* Bucket Name & Prefix (Editable per migration task) */}
+        {/* Bucket Name & Prefix */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           <div>
             <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 mb-1">
               <Server className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400" />
               <span>{isSource ? "Source Bucket Name" : "Target Bucket Name"}</span>
-              <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="Masukkan nama bucket..."
+              readOnly
+              tabIndex={-1}
+              placeholder="Pilih profil untuk memuat bucket..."
               value={config.bucket_name}
-              onChange={(e) => onChange({ ...config, bucket_name: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition shadow-xs"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition font-semibold"
             />
           </div>
           <div>

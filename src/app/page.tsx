@@ -469,8 +469,8 @@ export default function Home() {
             region: p.region,
             access_key_id: p.access_key_id,
             secret_access_key: p.secret_access_key,
-            bucket_name: p.bucket_name || prev.bucket_name,
-            prefix: p.prefix || prev.prefix,
+            bucket_name: p.bucket_name,
+            prefix: p.prefix,
             use_path_style: p.use_path_style,
           }));
         }}
@@ -481,8 +481,8 @@ export default function Home() {
             region: p.region,
             access_key_id: p.access_key_id,
             secret_access_key: p.secret_access_key,
-            bucket_name: p.bucket_name || prev.bucket_name,
-            prefix: p.prefix || prev.prefix,
+            bucket_name: p.bucket_name,
+            prefix: p.prefix,
             use_path_style: p.use_path_style,
           }));
         }}
