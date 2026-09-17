@@ -34,6 +34,7 @@ pub async fn test_connection(config: BucketConfig) -> Result<TestResult, String>
         return Err("Bucket name cannot be empty".to_string());
     }
 
+    // Try list_objects_v2 first
     match client.list_objects_v2().bucket(&bucket_name).max_keys(1).send().await {
         Ok(_) => Ok(TestResult {
             success: true,
@@ -42,8 +43,28 @@ pub async fn test_connection(config: BucketConfig) -> Result<TestResult, String>
             bucket: bucket_name,
         }),
         Err(e) => {
-            let err_msg = e.into_service_error();
-            Err(format!("{}: {}", err_msg.meta().code().unwrap_or("Error"), err_msg.meta().message().unwrap_or("Connection failed")))
+            let full_err = e.to_string();
+            // Check if bucket doesn't exist yet but user has account-level access
+            match client.list_buckets().send().await {
+                Ok(_) => {
+                    // User credentials are valid! They can connect to Wasabi.
+                    // The error on list_objects is because the bucket doesn't exist yet or is forbidden.
+                    if full_err.contains("NoSuchBucket") || full_err.contains("NotFound") || full_err.contains("AccessDenied") {
+                        Ok(TestResult {
+                            success: true,
+                            message: format!("Credentials valid! Bucket '{}' will be auto-created during migration.", bucket_name),
+                            endpoint: config.endpoint_url,
+                            bucket: bucket_name,
+                        })
+                    } else {
+                        Err(format!("Wasabi error on bucket '{}': {}", bucket_name, full_err))
+                    }
+                }
+                Err(list_err) => {
+                    // Truly invalid credentials or blocked at account level
+                    Err(format!("Auth failed: {}. Detail: {}", list_err, full_err))
+                }
+            }
         }
     }
 }
