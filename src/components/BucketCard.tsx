@@ -429,7 +429,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </div>
           )}
           {errorMessage && (
-            <div className="inline-flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/20 px-2.5 py-1 rounded-md shadow-xs">
+            <div
+              title={`${errorMessage}\n(Klik untuk melihat/salin pesan error lengkap)`}
+              onClick={() => alert(`Detail Error:\n\n${errorMessage}`)}
+              className="inline-flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/20 px-2.5 py-1 rounded-md shadow-xs cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-500/20 transition"
+            >
               <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
               <span className="truncate max-w-[260px]">{errorMessage}</span>
             </div>
