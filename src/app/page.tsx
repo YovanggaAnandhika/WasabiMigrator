@@ -2,11 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { ArrowLeftRight, HardDriveDownload, ShieldCheck, Sparkles, Moon, Sun, Settings, Database, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { BucketCard } from "@/components/BucketCard";
 import { ConflictSettings } from "@/components/ConflictSettings";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LogConsole } from "@/components/LogConsole";
-import { ProfileManagerModal } from "@/components/ProfileManagerModal";
+
+const ProfileManagerModal = dynamic(
+  () => import("@/components/profiles").then((mod) => mod.ProfileManagerModal),
+  { ssr: false }
+);
 import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent, ProfileRecord } from "@/lib/types";
 import {
   startMigration,
