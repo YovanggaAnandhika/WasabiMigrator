@@ -33,6 +33,7 @@ export const BucketCard: React.FC<BucketCardProps> = ({
   config,
   onChange,
   profiles = [],
+  onLog,
   disabled = false,
   className = "",
 }) => {
@@ -50,12 +51,31 @@ export const BucketCard: React.FC<BucketCardProps> = ({
     setTestResult(null);
     setErrorMessage(null);
 
+    const bucketLabel = isSource ? "Source" : "Destination";
+    const bucketName = config.bucket_name || "(kosong)";
+
+    if (onLog) {
+      onLog("info", `[Tes Koneksi ${bucketLabel}] Menguji akses ke bucket '${bucketName}' (${config.endpoint_url})...`);
+    }
+
     try {
       const res = await testBucketConnection(config);
       setTestResult(res);
+      if (res.success) {
+        if (onLog) {
+          onLog("info", `✓ [Tes Koneksi ${bucketLabel}] Berhasil terhubung ke '${bucketName}'. Pesan: ${res.message}`);
+        }
+      } else {
+        if (onLog) {
+          onLog("error", `✗ [Tes Koneksi ${bucketLabel}] Gagal verifikasi bucket '${bucketName}': ${res.message}`);
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setErrorMessage(msg);
+      if (onLog) {
+        onLog("error", `✗ [Tes Koneksi ${bucketLabel}] Error koneksi bucket '${bucketName}': ${msg}`);
+      }
     } finally {
       setTesting(false);
     }
