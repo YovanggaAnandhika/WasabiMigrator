@@ -72,6 +72,36 @@ pub async fn execute_migration(
         }
     };
 
+    // Check if target bucket exists, if not, attempt to create it
+    emit_log(&app, "info", &format!("Checking target bucket '{}'...", target.bucket_name));
+    match target_client.head_bucket().bucket(&target.bucket_name).send().await {
+        Ok(_) => {
+            emit_log(&app, "info", &format!("Target bucket '{}' exists and is accessible.", target.bucket_name));
+        }
+        Err(e) => {
+            let status_code = e.as_service_error().and_then(|se| se.meta().code());
+            let is_not_found = matches!(status_code, Some("NotFound") | Some("NoSuchBucket"))
+                || e.to_string().contains("404")
+                || e.to_string().to_lowercase().contains("not found");
+
+            if is_not_found {
+                emit_log(&app, "warn", &format!("Target bucket '{}' not found. Creating it now...", target.bucket_name));
+                match target_client.create_bucket().bucket(&target.bucket_name).send().await {
+                    Ok(_) => {
+                        emit_log(&app, "info", &format!("Successfully created target bucket '{}'!", target.bucket_name));
+                    }
+                    Err(create_err) => {
+                        let err_msg = format!("Failed to automatically create target bucket '{}': {}", target.bucket_name, create_err);
+                        emit_log(&app, "error", &err_msg);
+                        return Err(err_msg);
+                    }
+                }
+            } else {
+                emit_log(&app, "warn", &format!("Warning checking target bucket '{}': {}. Proceeding anyway...", target.bucket_name, e));
+            }
+        }
+    };
+
     let source_ep = source.endpoint_url.trim().trim_end_matches('/').to_lowercase();
     let target_ep = target.endpoint_url.trim().trim_end_matches('/').to_lowercase();
     let is_same_host = source_ep == target_ep;
