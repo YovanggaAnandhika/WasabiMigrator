@@ -9,7 +9,6 @@ interface ProfileSelectorBarProps {
   currentConfig: BucketConfig;
   disabled: boolean;
   onSelectProfile: (config: BucketConfig) => void;
-  onOpenProfileManager?: () => void;
 }
 
 export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
@@ -17,7 +16,6 @@ export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
   currentConfig,
   disabled,
   onSelectProfile,
-  onOpenProfileManager,
 }) => {
   // Find matching profile ID based on endpoint_url, access_key_id and bucket_name
   const matchedProfile = profiles.find(
@@ -30,7 +28,7 @@ export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
   const selectedValue = matchedProfile ? matchedProfile.id : "";
 
   return (
-    <div className={`mt-3 p-2.5 rounded-xl border transition-colors flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${
+    <div className={`mt-3 p-2.5 rounded-xl border transition-colors flex items-center justify-between gap-2 ${
       selectedValue
         ? "border-blue-500/40 bg-blue-50/40 dark:bg-blue-950/20"
         : "border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/50"
@@ -57,7 +55,7 @@ export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
               });
             }
           }}
-          className={`flex-1 text-xs rounded-lg border px-2.5 py-1 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition font-medium ${
+          className={`w-full text-xs rounded-lg border px-2.5 py-1.5 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition font-medium ${
             selectedValue
               ? "border-blue-500/50 bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 font-semibold shadow-xs"
               : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
@@ -73,18 +71,6 @@ export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
           ))}
         </select>
       </div>
-
-      {onOpenProfileManager && (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onOpenProfileManager}
-          className="flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition shrink-0"
-        >
-          <Plus className="h-3 w-3" />
-          <span>Kelola Profil</span>
-        </button>
-      )}
     </div>
   );
 };

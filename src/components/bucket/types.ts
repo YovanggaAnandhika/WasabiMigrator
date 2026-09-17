@@ -6,7 +6,6 @@ export interface BucketCardProps {
   config: BucketConfig;
   onChange: (newConfig: BucketConfig) => void;
   profiles?: ProfileRecord[];
-  onOpenProfileManager?: () => void;
   disabled?: boolean;
   className?: string;
 }

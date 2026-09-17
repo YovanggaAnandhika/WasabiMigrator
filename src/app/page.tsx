@@ -399,7 +399,6 @@ export default function Home() {
             config={sourceConfig}
             onChange={setSourceConfig}
             profiles={profiles}
-            onOpenProfileManager={() => setIsProfileModalOpen(true)}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-left ring-2 ring-blue-500/50" : "transition-all duration-300"}
           />
@@ -431,7 +430,6 @@ export default function Home() {
             config={targetConfig}
             onChange={setTargetConfig}
             profiles={profiles}
-            onOpenProfileManager={() => setIsProfileModalOpen(true)}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-right ring-2 ring-emerald-500/50" : "transition-all duration-300"}
           />
