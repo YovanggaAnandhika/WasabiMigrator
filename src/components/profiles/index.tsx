@@ -398,6 +398,11 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                 statusMessage={statusMessage}
                 onChangeFormData={setFormData}
                 onSave={handleSave}
+                onDelete={() => {
+                  if (formData.id) {
+                    handleDelete(formData.id, formData.name);
+                  }
+                }}
                 onCloseForm={resetForm}
                 onTestConnection={handleTestConnection}
                 onExportCSV={exportProfileToCSV}

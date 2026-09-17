@@ -18,6 +18,7 @@ import {
   FileDown,
   Loader2,
   Save,
+  Trash2,
 } from "lucide-react";
 import { ProfileInput, ProfileRecord, TestResult } from "@/lib/types";
 import { PRESETS } from "./types";
@@ -32,6 +33,7 @@ interface ProfileFormProps {
   statusMessage: { text: string; type: "success" | "error" } | null;
   onChangeFormData: (data: ProfileInput) => void;
   onSave: (e: React.FormEvent) => void;
+  onDelete?: () => void;
   onCloseForm: () => void;
   onTestConnection: () => void;
   onExportCSV: (profile: ProfileInput | ProfileRecord) => void;
@@ -47,6 +49,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   statusMessage,
   onChangeFormData,
   onSave,
+  onDelete,
   onCloseForm,
   onTestConnection,
   onExportCSV,
@@ -63,14 +66,24 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           </h3>
           <div className="flex items-center gap-2">
             {isEditing && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
                 ID: {formData.id?.slice(0, 8)}...
               </span>
+            )}
+            {isEditing && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 p-1.5 rounded-lg transition"
+                title="Hapus profil ini"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             )}
             <button
               type="button"
               onClick={onCloseForm}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 p-1"
+              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 p-1 rounded-lg transition"
               title="Tutup form"
             >
               <X className="h-4 w-4" />
