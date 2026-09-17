@@ -291,11 +291,10 @@ export default function Home() {
 
   return (
     <div
-      className={`h-screen overflow-hidden ${
-        theme === "dark"
+      className={`h-screen overflow-hidden ${theme === "dark"
           ? "dark bg-[#090a0f] text-zinc-100"
           : "bg-slate-100 text-slate-900"
-      } font-sans p-3 sm:p-4 flex flex-col justify-between transition-colors duration-200`}
+        } font-sans p-3 sm:p-4 flex flex-col justify-between transition-colors duration-200`}
     >
       {/* Glow background effects in dark mode */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 dark:block hidden">
@@ -320,7 +319,6 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-amber-500 dark:text-amber-400" />
                 Auto-Detect Server-Side Copy (0% bandwidth) & Cross-Host Streaming
               </p>
             </div>
@@ -337,11 +335,10 @@ export default function Home() {
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
               title="Kelola Profil Kredensial SQLite"
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold shadow-sm transition ${
-                isProfileModalOpen
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold shadow-sm transition ${isProfileModalOpen
                   ? "border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400"
                   : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-200 hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-zinc-800/80"
-              }`}
+                }`}
             >
               <Database className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
               <span>Profil Kredensial</span>
@@ -357,11 +354,10 @@ export default function Home() {
               type="button"
               onClick={() => setIsSettingsOpen(true)}
               title="Buka Pengaturan Migrasi"
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold shadow-sm transition ${
-                isSettingsOpen
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold shadow-sm transition ${isSettingsOpen
                   ? "border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400"
                   : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-200 hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-zinc-800/80"
-              }`}
+                }`}
             >
               <Settings className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
               <span>Settings</span>
@@ -420,14 +416,12 @@ export default function Home() {
               disabled={isMigrating || isSwapping}
               onClick={handleSwap}
               title="Tukar Posisi Source dan Target (Swap)"
-              className={`flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 shadow-2xl backdrop-blur-xl hover:border-blue-500 hover:text-blue-500 hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group ${
-                isSwapping ? "scale-125 border-blue-500 text-blue-500 ring-4 ring-blue-500/20" : ""
-              }`}
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 shadow-2xl backdrop-blur-xl hover:border-blue-500 hover:text-blue-500 hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed group ${isSwapping ? "scale-125 border-blue-500 text-blue-500 ring-4 ring-blue-500/20" : ""
+                }`}
             >
               <ArrowLeftRight
-                className={`h-4 w-4 transition-transform duration-500 text-blue-500 dark:text-blue-400 ${
-                  isSwapping ? "rotate-180 scale-110" : "group-hover:rotate-180"
-                }`}
+                className={`h-4 w-4 transition-transform duration-500 text-blue-500 dark:text-blue-400 ${isSwapping ? "rotate-180 scale-110" : "group-hover:rotate-180"
+                  }`}
               />
             </button>
           </div>

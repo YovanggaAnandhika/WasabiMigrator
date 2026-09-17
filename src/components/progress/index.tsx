@@ -46,6 +46,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/70 backdrop-blur-xl p-5 shadow-lg dark:shadow-2xl space-y-4">
       <ProgressHeader
+        progress={progress}
         isSameHost={isSameHost}
         isSameBucket={isSameBucket}
         isMigrating={isMigrating}

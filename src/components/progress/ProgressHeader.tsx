@@ -2,8 +2,10 @@
 
 import React from "react";
 import { Zap, Radio, Play, Square } from "lucide-react";
+import { ProgressEvent } from "@/lib/types";
 
 interface ProgressHeaderProps {
+  progress: ProgressEvent;
   isSameHost: boolean;
   isSameBucket: boolean;
   isMigrating: boolean;
@@ -13,6 +15,7 @@ interface ProgressHeaderProps {
 }
 
 export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
+  progress,
   isSameHost,
   isSameBucket,
   isMigrating,
@@ -36,27 +39,38 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
               </span>
             </div>
           </div>
-        ) : isSameHost ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
-            <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400 animate-pulse" />
-            <div>
-              <span className="text-xs font-bold tracking-wide">
-                SERVER-SIDE COPY (0% Local Bandwidth)
-              </span>
-              <span className="hidden sm:inline text-[11px] text-emerald-600/80 dark:text-emerald-400/80 ml-2">
-                • Transfer langsung di datacenter cloud
-              </span>
+        ) : isMigrating ? (
+          progress.transfer_mode === "server_side_copy" ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
+              <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400 animate-pulse" />
+              <div>
+                <span className="text-xs font-bold tracking-wide">
+                  SERVER-SIDE COPY (0% Local Bandwidth)
+                </span>
+                <span className="hidden sm:inline text-[11px] text-emerald-600/80 dark:text-emerald-400/80 ml-2">
+                  • Transfer internal cloud aktif
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+              <Radio className="h-4 w-4 text-amber-500 dark:text-amber-400 animate-pulse" />
+              <div>
+                <span className="text-xs font-bold tracking-wide">
+                  CLIENT STREAMING RELAY
+                </span>
+                <span className="hidden sm:inline text-[11px] text-amber-600/80 dark:text-amber-400/80 ml-2">
+                  • Streaming transfer via RAM buffer
+                </span>
+              </div>
+            </div>
+          )
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300">
-            <Radio className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-400">
+            <Radio className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
             <div>
-              <span className="text-xs font-bold tracking-wide">
-                CLIENT STREAMING RELAY
-              </span>
-              <span className="hidden sm:inline text-[11px] text-amber-600/80 dark:text-amber-400/80 ml-2">
-                • Host berbeda, streaming via RAM buffer
+              <span className="text-xs font-medium tracking-wide">
+                Mode Transfer: {isSameHost ? "Auto-Detect Server-Side Copy (Fallback to Stream)" : "Client Streaming Relay"}
               </span>
             </div>
           </div>
