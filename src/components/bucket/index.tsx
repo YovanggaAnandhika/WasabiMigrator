@@ -72,6 +72,7 @@ export const BucketCard: React.FC<BucketCardProps> = ({
 
       <ProfileSelectorBar
         profiles={profiles}
+        currentConfig={config}
         disabled={disabled}
         onSelectProfile={onChange}
         onOpenProfileManager={onOpenProfileManager}
@@ -80,8 +81,6 @@ export const BucketCard: React.FC<BucketCardProps> = ({
       <BucketFormFields
         config={config}
         isSource={isSource}
-        disabled={disabled}
-        onChangePrefix={(prefix) => onChange({ ...config, prefix })}
       />
 
       <BucketFooter

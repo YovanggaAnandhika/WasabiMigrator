@@ -97,6 +97,55 @@ export default function Home() {
     loadStoredProfiles();
   }, []);
 
+  // Handle profiles updated from SQLite modal
+  const handleProfilesUpdated = (updatedList: ProfileRecord[]) => {
+    setProfiles(updatedList);
+
+    // Sync sourceConfig if it was matched to an updated profile
+    setSourceConfig((prev) => {
+      const matched = updatedList.find(
+        (p) =>
+          prev.endpoint_url &&
+          p.endpoint_url.trim().toLowerCase() === prev.endpoint_url.trim().toLowerCase() &&
+          p.access_key_id.trim() === prev.access_key_id.trim()
+      );
+      if (matched) {
+        return {
+          endpoint_url: matched.endpoint_url,
+          region: matched.region,
+          access_key_id: matched.access_key_id,
+          secret_access_key: matched.secret_access_key,
+          bucket_name: matched.bucket_name,
+          prefix: matched.prefix,
+          use_path_style: matched.use_path_style,
+        };
+      }
+      return prev;
+    });
+
+    // Sync targetConfig if it was matched to an updated profile
+    setTargetConfig((prev) => {
+      const matched = updatedList.find(
+        (p) =>
+          prev.endpoint_url &&
+          p.endpoint_url.trim().toLowerCase() === prev.endpoint_url.trim().toLowerCase() &&
+          p.access_key_id.trim() === prev.access_key_id.trim()
+      );
+      if (matched) {
+        return {
+          endpoint_url: matched.endpoint_url,
+          region: matched.region,
+          access_key_id: matched.access_key_id,
+          secret_access_key: matched.secret_access_key,
+          bucket_name: matched.bucket_name,
+          prefix: matched.prefix,
+          use_path_style: matched.use_path_style,
+        };
+      }
+      return prev;
+    });
+  };
+
   // Sync theme with HTML class & localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
@@ -128,6 +177,16 @@ export default function Home() {
   const cleanSourceEp = sourceConfig.endpoint_url.trim().replace(/\/+$/, "").toLowerCase();
   const cleanTargetEp = targetConfig.endpoint_url.trim().replace(/\/+$/, "").toLowerCase();
   const isSameHost = Boolean(cleanSourceEp && cleanTargetEp && cleanSourceEp === cleanTargetEp);
+
+  // Check if source and target bucket/profile are identical
+  const isSameBucket = Boolean(
+    sourceConfig.bucket_name.trim() &&
+    targetConfig.bucket_name.trim() &&
+    cleanSourceEp === cleanTargetEp &&
+    sourceConfig.access_key_id.trim() === targetConfig.access_key_id.trim() &&
+    sourceConfig.bucket_name.trim().toLowerCase() === targetConfig.bucket_name.trim().toLowerCase() &&
+    (sourceConfig.prefix || "").trim() === (targetConfig.prefix || "").trim()
+  );
 
   // Subscribe to Tauri IPC events
   useEffect(() => {
@@ -184,6 +243,10 @@ export default function Home() {
   };
 
   const handleStartMigration = async () => {
+    if (isSameBucket) {
+      alert("Peringatan: Profil Source Bucket dan Destination Bucket sama! Harap pilih profil/bucket yang berbeda.");
+      return;
+    }
     if (!sourceConfig.bucket_name.trim() || !targetConfig.bucket_name.trim()) {
       alert("Harap isi nama Source Bucket dan Target Bucket terlebih dahulu!");
       return;
@@ -379,6 +442,7 @@ export default function Home() {
           <ProgressBar
             progress={progress}
             isSameHost={isSameHost}
+            isSameBucket={isSameBucket}
             onStart={handleStartMigration}
             onCancel={handleCancelMigration}
             isMigrating={isMigrating}
@@ -482,7 +546,7 @@ export default function Home() {
       <ProfileManagerModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
-        onProfilesUpdated={(updated) => setProfiles(updated)}
+        onProfilesUpdated={handleProfilesUpdated}
         onSelectForSource={(p) => {
           setSourceConfig((prev) => ({
             ...prev,

@@ -3,6 +3,7 @@ import { ProgressEvent } from "@/lib/types";
 export interface ProgressBarProps {
   progress: ProgressEvent;
   isSameHost: boolean;
+  isSameBucket?: boolean;
   onStart: () => void;
   onCancel: () => void;
   isMigrating: boolean;

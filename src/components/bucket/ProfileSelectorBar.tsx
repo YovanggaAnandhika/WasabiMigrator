@@ -6,6 +6,7 @@ import { BucketConfig, ProfileRecord } from "@/lib/types";
 
 interface ProfileSelectorBarProps {
   profiles: ProfileRecord[];
+  currentConfig: BucketConfig;
   disabled: boolean;
   onSelectProfile: (config: BucketConfig) => void;
   onOpenProfileManager?: () => void;
@@ -13,20 +14,35 @@ interface ProfileSelectorBarProps {
 
 export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
   profiles,
+  currentConfig,
   disabled,
   onSelectProfile,
   onOpenProfileManager,
 }) => {
+  // Find matching profile ID based on endpoint_url, access_key_id and bucket_name
+  const matchedProfile = profiles.find(
+    (p) =>
+      p.endpoint_url.trim().toLowerCase() === currentConfig.endpoint_url.trim().toLowerCase() &&
+      p.access_key_id.trim() === currentConfig.access_key_id.trim() &&
+      p.bucket_name.trim().toLowerCase() === (currentConfig.bucket_name || "").trim().toLowerCase()
+  );
+
+  const selectedValue = matchedProfile ? matchedProfile.id : "";
+
   return (
-    <div className="mt-3 p-2.5 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-      <div className="flex items-center gap-2 min-w-0">
-        <Bookmark className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+    <div className={`mt-3 p-2.5 rounded-xl border transition-colors flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 ${
+      selectedValue
+        ? "border-blue-500/40 bg-blue-50/40 dark:bg-blue-950/20"
+        : "border-slate-200 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-950/50"
+    }`}>
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Bookmark className={`h-3.5 w-3.5 shrink-0 ${selectedValue ? "text-blue-500 fill-blue-500/20" : "text-slate-400 dark:text-zinc-500"}`} />
         <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 shrink-0">
-          Profil Tersimpan:
+          Profil:
         </span>
         <select
           disabled={disabled}
-          value=""
+          value={selectedValue}
           onChange={(e) => {
             const selected = profiles.find((p) => p.id === e.target.value);
             if (selected) {
@@ -41,7 +57,11 @@ export const ProfileSelectorBar: React.FC<ProfileSelectorBarProps> = ({
               });
             }
           }}
-          className="flex-1 text-xs rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+          className={`flex-1 text-xs rounded-lg border px-2.5 py-1 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer transition font-medium ${
+            selectedValue
+              ? "border-blue-500/50 bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-300 font-semibold shadow-xs"
+              : "border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+          }`}
         >
           <option value="" disabled>
             {profiles.length > 0 ? "-- Pilih Profil Kredensial --" : "(Belum ada profil tersimpan)"}

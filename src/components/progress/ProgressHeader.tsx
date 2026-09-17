@@ -5,6 +5,7 @@ import { Zap, Radio, Play, Square } from "lucide-react";
 
 interface ProgressHeaderProps {
   isSameHost: boolean;
+  isSameBucket: boolean;
   isMigrating: boolean;
   disabled: boolean;
   onStart: () => void;
@@ -13,6 +14,7 @@ interface ProgressHeaderProps {
 
 export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
   isSameHost,
+  isSameBucket,
   isMigrating,
   disabled,
   onStart,
@@ -20,9 +22,21 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
 }) => {
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b border-slate-200 dark:border-zinc-800/80 pb-4">
-      {/* Dynamic Mode Badge */}
+      {/* Dynamic Mode Badge / Warning Badge */}
       <div className="flex items-center gap-2.5">
-        {isSameHost ? (
+        {isSameBucket ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <Radio className="h-4 w-4 text-rose-500 animate-pulse" />
+            <div>
+              <span className="text-xs font-bold tracking-wide">
+                PERINGATAN: SOURCE & DESTINATION SAMA
+              </span>
+              <span className="hidden sm:inline text-[11px] text-rose-600/80 dark:text-rose-400/80 ml-2">
+                • Pilih profil atau bucket yang berbeda untuk migrasi
+              </span>
+            </div>
+          </div>
+        ) : isSameHost ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">
             <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400 fill-emerald-500 dark:fill-emerald-400 animate-pulse" />
             <div>
@@ -54,9 +68,10 @@ export const ProgressHeader: React.FC<ProgressHeaderProps> = ({
         {!isMigrating ? (
           <button
             type="button"
-            disabled={disabled}
+            disabled={disabled || isSameBucket}
             onClick={onStart}
-            className="flex-1 md:flex-initial flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isSameBucket ? "Tidak bisa migrasi: Profil Source dan Destination sama" : undefined}
+            className="flex-1 md:flex-initial flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed disabled:saturate-50"
           >
             <Play className="h-4 w-4 fill-white" />
             Mulai Migrasi Bucket

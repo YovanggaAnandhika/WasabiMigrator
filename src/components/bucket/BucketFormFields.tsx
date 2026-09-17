@@ -7,15 +7,11 @@ import { BucketConfig } from "@/lib/types";
 interface BucketFormFieldsProps {
   config: BucketConfig;
   isSource: boolean;
-  disabled: boolean;
-  onChangePrefix: (prefix: string) => void;
 }
 
 export const BucketFormFields: React.FC<BucketFormFieldsProps> = ({
   config,
   isSource,
-  disabled,
-  onChangePrefix,
 }) => {
   const [showSecret, setShowSecret] = useState(false);
 
@@ -118,11 +114,11 @@ export const BucketFormFields: React.FC<BucketFormFieldsProps> = ({
           </label>
           <input
             type="text"
-            disabled={disabled}
-            placeholder="folder/subfolder/ (opsional)"
-            value={config.prefix}
-            onChange={(e) => onChangePrefix(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition shadow-xs"
+            readOnly
+            tabIndex={-1}
+            placeholder="-"
+            value={config.prefix || ""}
+            className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
           />
         </div>
       </div>
