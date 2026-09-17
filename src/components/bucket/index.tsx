@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Database } from "lucide-react";
 import dynamic from "next/dynamic";
 import { BucketConfig, TestResult } from "@/lib/types";
 import { testBucketConnection } from "@/lib/tauri";
@@ -96,34 +97,60 @@ export const BucketCard: React.FC<BucketCardProps> = ({
     }
   };
 
+  const isProfileLoaded = Boolean(
+    config.access_key_id.trim() && config.bucket_name.trim()
+  );
+
   return (
-    <div className={`relative flex flex-col rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/70 backdrop-blur-xl p-5 shadow-lg dark:shadow-2xl transition-all duration-300 hover:border-slate-300 dark:hover:border-zinc-700/80 ${className}`}>
-      <BucketHeader
-        title={title}
-        isSource={isSource}
-        badgeColor={badgeColor}
-      />
+    <div className={`relative flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/70 backdrop-blur-xl p-5 shadow-lg dark:shadow-2xl transition-all duration-300 hover:border-slate-300 dark:hover:border-zinc-700/80 ${className}`}>
+      <div className="flex-1 flex flex-col min-h-0">
+        <BucketHeader
+          title={title}
+          isSource={isSource}
+          badgeColor={badgeColor}
+        />
 
-      <ProfileSelectorBar
-        profiles={profiles}
-        currentConfig={config}
-        disabled={disabled}
-        onSelectProfile={onChange}
-      />
+        <ProfileSelectorBar
+          profiles={profiles}
+          currentConfig={config}
+          disabled={disabled}
+          onSelectProfile={onChange}
+        />
 
-      <BucketFormFields
-        config={config}
-        isSource={isSource}
-      />
+        {isProfileLoaded ? (
+          <BucketFormFields
+            config={config}
+            isSource={isSource}
+          />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center my-6 py-8 px-4 text-center border border-dashed border-slate-200 dark:border-zinc-800/80 rounded-xl bg-slate-50/40 dark:bg-zinc-950/30">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center mb-2.5 ${
+              isSource ? "bg-blue-500/10 text-blue-500" : "bg-emerald-500/10 text-emerald-500"
+            }`}>
+              <Database className="h-5 w-5" />
+            </div>
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
+              {profiles.length > 0 ? "Pilih Profil Kredensial Terlebih Dahulu" : "Belum Ada Profil Tersimpan"}
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-zinc-500 mt-1 max-w-xs leading-relaxed">
+              {profiles.length > 0
+                ? "Silakan pilih salah satu profil di dropdown atas untuk memuat kredensial dan form bucket."
+                : "Harap buat atau import profil kredensial melalui tombol 'Profil Kredensial' di header atas."}
+            </p>
+          </div>
+        )}
+      </div>
 
-      <BucketFooter
-        isSource={isSource}
-        disabled={disabled}
-        testing={testing}
-        testResult={testResult}
-        errorMessage={errorMessage}
-        onTest={handleTest}
-      />
+      {isProfileLoaded && (
+        <BucketFooter
+          isSource={isSource}
+          disabled={disabled}
+          testing={testing}
+          testResult={testResult}
+          errorMessage={errorMessage}
+          onTest={handleTest}
+        />
+      )}
     </div>
   );
 };

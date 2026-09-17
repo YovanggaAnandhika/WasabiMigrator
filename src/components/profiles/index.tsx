@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { ProfileInput, ProfileRecord, TestResult } from "@/lib/types";
 import {
@@ -57,6 +58,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -326,11 +328,15 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     reader.readAsText(file);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus profil '${name}' dari SQLite database?`)) {
-      return;
-    }
+  const promptDelete = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmAndExecuteDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, name } = deleteTarget;
     setDeleting(true);
+    setDeleteTarget(null);
     try {
       await deleteProfile(id);
       await fetchProfiles();
@@ -378,7 +384,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             onStartAdd={handleStartAdd}
             onOpenImportCSV={() => fileInputRef.current?.click()}
             onExportCSV={exportProfileToCSV}
-            onDeleteProfile={handleDelete}
+            onDeleteProfile={promptDelete}
           />
 
           <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-[#0c0d14]">
@@ -400,7 +406,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                 onSave={handleSave}
                 onDelete={() => {
                   if (formData.id) {
-                    handleDelete(formData.id, formData.name);
+                    promptDelete(formData.id, formData.name);
                   }
                 }}
                 onCloseForm={resetForm}
@@ -410,6 +416,44 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Custom Themed Confirmation Modal for Delete */}
+        {deleteTarget && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Hapus Profil Kredensial?
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                    Apakah Anda yakin ingin menghapus profil <strong className="text-slate-800 dark:text-zinc-200 font-semibold">&apos;{deleteTarget.name}&apos;</strong> secara permanen dari database SQLite?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAndExecuteDelete}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-md shadow-red-600/20 transition"
+                >
+                  Ya, Hapus Profil
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
