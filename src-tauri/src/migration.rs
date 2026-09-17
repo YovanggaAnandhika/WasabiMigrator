@@ -54,6 +54,7 @@ pub async fn execute_migration(
     target: BucketConfig,
     strategy: ConflictStrategy,
     cancel_flag: Arc<AtomicBool>,
+    concurrency: Option<usize>,
 ) -> Result<(), String> {
     let source_client = match build_client(&source) {
         Ok(c) => c,
@@ -186,7 +187,7 @@ pub async fn execute_migration(
     let target_prefix = target.prefix.as_deref().unwrap_or("").trim().to_string();
     let source_prefix = source.prefix.as_deref().unwrap_or("").trim().to_string();
 
-    let concurrency_limit = 20; // 20 concurrent cloud copy workers
+    let concurrency_limit = concurrency.unwrap_or(16).clamp(1, 100);
     emit_log(
         &app,
         "info",
@@ -218,6 +219,12 @@ pub async fn execute_migration(
             Ok(p) => p,
             Err(_) => break,
         };
+
+        if cancel_flag.load(Ordering::Relaxed) {
+            drop(permit);
+            emit_log(&app, "warn", "Migration cancelled by user.");
+            break;
+        }
 
         let app_clone = app.clone();
         let cancel_clone = cancel_flag.clone();
@@ -265,6 +272,10 @@ pub async fn execute_migration(
             // Check conflict strategy
             let mut skip_file = false;
             if strategy != ConflictStrategy::AlwaysOverwrite {
+                if cancel_clone.load(Ordering::Relaxed) {
+                    return;
+                }
+
                 if let Ok(head_resp) = t_client
                     .head_object()
                     .bucket(&*t_bucket)
@@ -272,6 +283,10 @@ pub async fn execute_migration(
                     .send()
                     .await
                 {
+                    if cancel_clone.load(Ordering::Relaxed) {
+                        return;
+                    }
+
                     if strategy == ConflictStrategy::IgnoreExisting {
                         skip_file = true;
                     } else if strategy == ConflictStrategy::ReplaceIfDifferent {
@@ -319,6 +334,10 @@ pub async fn execute_migration(
                 return;
             }
 
+            if cancel_clone.load(Ordering::Relaxed) {
+                return;
+            }
+
             // Perform transfer
             let transfer_result: Result<(), String> = if is_same_host {
                 let encoded_key = urlencoding::encode(&obj.key);
@@ -334,6 +353,9 @@ pub async fn execute_migration(
                 {
                     Ok(_) => Ok(()),
                     Err(_) => {
+                        if cancel_clone.load(Ordering::Relaxed) {
+                            return;
+                        }
                         // Fallback to streaming if server copy fails
                         stream_copy(&s_client, &t_client, &s_bucket, &obj.key, &t_bucket, &target_key, obj.size).await
                     }
@@ -341,6 +363,10 @@ pub async fn execute_migration(
             } else {
                 stream_copy(&s_client, &t_client, &s_bucket, &obj.key, &t_bucket, &target_key, obj.size).await
             };
+
+            if cancel_clone.load(Ordering::Relaxed) {
+                return;
+            }
 
             match transfer_result {
                 Ok(_) => {
@@ -377,6 +403,10 @@ pub async fn execute_migration(
                     );
                 }
                 Err(err) => {
+                    if cancel_clone.load(Ordering::Relaxed) {
+                        return;
+                    }
+
                     let f_count = f_files.fetch_add(1, Ordering::Relaxed) + 1;
                     let c_count = c_files.load(Ordering::Relaxed);
                     let s_count = s_files.load(Ordering::Relaxed);
@@ -409,9 +439,20 @@ pub async fn execute_migration(
         handles.push(handle);
     }
 
-    // Wait for all concurrent worker tasks to finish
-    for handle in handles {
-        let _ = handle.await;
+    // If cancelled, abort all spawned tasks immediately
+    if cancel_flag.load(Ordering::Relaxed) {
+        for handle in &handles {
+            handle.abort();
+        }
+    } else {
+        // Wait for workers with cancel check
+        for handle in handles {
+            if cancel_flag.load(Ordering::Relaxed) {
+                handle.abort();
+            } else {
+                let _ = handle.await;
+            }
+        }
     }
 
     let final_copied = copied_files.load(Ordering::Relaxed);

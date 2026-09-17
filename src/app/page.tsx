@@ -51,6 +51,7 @@ export default function Home() {
   const [sourceConfig, setSourceConfig] = useState<BucketConfig>(INITIAL_SOURCE);
   const [targetConfig, setTargetConfig] = useState<BucketConfig>(INITIAL_TARGET);
   const [conflictStrategy, setConflictStrategy] = useState<ConflictStrategy>("ReplaceIfDifferent");
+  const [concurrency, setConcurrency] = useState<number>(16);
   const [progress, setProgress] = useState<ProgressEvent>(INITIAL_PROGRESS);
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -162,7 +163,7 @@ export default function Home() {
     });
 
     try {
-      await startMigration(sourceConfig, targetConfig, conflictStrategy);
+      await startMigration(sourceConfig, targetConfig, conflictStrategy, concurrency);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setLogs((prev) => [
@@ -377,6 +378,8 @@ export default function Home() {
               <ConflictSettings
                 strategy={conflictStrategy}
                 onChange={(s) => setConflictStrategy(s)}
+                concurrency={concurrency}
+                onConcurrencyChange={(c) => setConcurrency(c)}
                 disabled={isMigrating}
               />
 

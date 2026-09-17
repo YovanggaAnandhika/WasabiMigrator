@@ -25,6 +25,7 @@ async fn start_migration(
     source: BucketConfig,
     target: BucketConfig,
     strategy: ConflictStrategy,
+    concurrency: Option<usize>,
 ) -> Result<(), String> {
     if state.is_running.load(Ordering::Relaxed) {
         return Err("A migration task is already running".to_string());
@@ -37,7 +38,7 @@ async fn start_migration(
     let cancel_flag_clone = Arc::clone(&state.cancel_flag);
 
     tokio::spawn(async move {
-        let _ = migration::execute_migration(app, source, target, strategy, cancel_flag_clone).await;
+        let _ = migration::execute_migration(app, source, target, strategy, cancel_flag_clone, concurrency).await;
         is_running_clone.store(false, Ordering::Relaxed);
     });
 

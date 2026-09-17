@@ -33,7 +33,8 @@ export async function testBucketConnection(config: BucketConfig): Promise<TestRe
 export async function startMigration(
   source: BucketConfig,
   target: BucketConfig,
-  strategy: ConflictStrategy
+  strategy: ConflictStrategy,
+  concurrency?: number
 ): Promise<void> {
   if (!isTauri()) {
     throw new Error("Migration execution requires running inside the Tauri desktop app.");
@@ -51,6 +52,7 @@ export async function startMigration(
       use_path_style: target.use_path_style ?? true,
     },
     strategy,
+    concurrency: concurrency ? Math.max(1, Math.min(100, concurrency)) : 16,
   });
 }
 
