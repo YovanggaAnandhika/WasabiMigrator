@@ -1,12 +1,13 @@
 mod models;
 mod s3_client;
 mod migration;
+mod db;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
-use models::{BucketConfig, ConflictStrategy, TestResult};
+use models::{BucketConfig, ConflictStrategy, ProfileInput, ProfileRecord, TestResult};
 
 pub struct MigrationState {
     pub is_running: Arc<AtomicBool>,
@@ -16,6 +17,26 @@ pub struct MigrationState {
 #[tauri::command]
 async fn test_bucket_connection(config: BucketConfig) -> Result<TestResult, String> {
     migration::test_connection(config).await
+}
+
+#[tauri::command]
+fn get_profiles(app: AppHandle) -> Result<Vec<ProfileRecord>, String> {
+    db::get_all_profiles(&app)
+}
+
+#[tauri::command]
+fn save_profile(app: AppHandle, profile: ProfileInput) -> Result<ProfileRecord, String> {
+    db::save_profile(&app, profile)
+}
+
+#[tauri::command]
+fn delete_profile(app: AppHandle, id: String) -> Result<(), String> {
+    db::delete_profile(&app, id)
+}
+
+#[tauri::command]
+fn get_db_path(app: AppHandle) -> Result<String, String> {
+    db::get_db_path(&app).map(|p| p.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -63,10 +84,21 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .setup(|app| {
+            // Auto initialize database & tables on startup
+            if let Err(e) = db::init_db(&app.handle()) {
+                eprintln!("Failed to initialize database on startup: {}", e);
+            }
+            Ok(())
+        })
         .manage(migration_state)
         .plugin(tauri_plugin_log::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             test_bucket_connection,
+            get_profiles,
+            save_profile,
+            delete_profile,
+            get_db_path,
             start_migration,
             cancel_migration
         ])

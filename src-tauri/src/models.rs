@@ -54,3 +54,31 @@ pub struct LogEvent {
     pub level: String, // "info" | "warn" | "error" | "success"
     pub message: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileRecord {
+    pub id: String,
+    pub name: String,
+    pub endpoint_url: String,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub bucket_name: String,
+    pub prefix: String,
+    pub use_path_style: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileInput {
+    pub id: Option<String>,
+    pub name: String,
+    pub endpoint_url: String,
+    pub region: String,
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub bucket_name: Option<String>,
+    pub prefix: Option<String>,
+    pub use_path_style: Option<bool>,
+}

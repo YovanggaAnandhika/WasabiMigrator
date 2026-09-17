@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent, TestResult } from "./types";
+import {
+  BucketConfig,
+  ConflictStrategy,
+  LogEvent,
+  ProgressEvent,
+  TestResult,
+  ProfileInput,
+  ProfileRecord,
+} from "./types";
 
 export const isTauri = () => {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -73,4 +81,24 @@ export async function onMigrationLog(
 ): Promise<UnlistenFn> {
   if (!isTauri()) return () => {};
   return await listen<LogEvent>("migration-log", (e) => callback(e.payload));
+}
+
+// ==========================================
+// SQLite Profile Management IPC Functions
+// ==========================================
+
+export async function getProfiles(): Promise<ProfileRecord[]> {
+  return await invoke<ProfileRecord[]>("get_profiles");
+}
+
+export async function saveProfile(profile: ProfileInput): Promise<ProfileRecord> {
+  return await invoke<ProfileRecord>("save_profile", { profile });
+}
+
+export async function deleteProfile(id: string): Promise<void> {
+  await invoke("delete_profile", { id });
+}
+
+export async function getDbPath(): Promise<string> {
+  return await invoke<string>("get_db_path");
 }

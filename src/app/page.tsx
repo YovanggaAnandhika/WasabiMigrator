@@ -1,17 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowLeftRight, HardDriveDownload, ShieldCheck, Sparkles, Moon, Sun, Settings, X } from "lucide-react";
+import { ArrowLeftRight, HardDriveDownload, ShieldCheck, Sparkles, Moon, Sun, Settings, Database, X } from "lucide-react";
 import { BucketCard } from "@/components/BucketCard";
 import { ConflictSettings } from "@/components/ConflictSettings";
 import { ProgressBar } from "@/components/ProgressBar";
 import { LogConsole } from "@/components/LogConsole";
-import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent } from "@/lib/types";
+import { ProfileManagerModal } from "@/components/ProfileManagerModal";
+import { BucketConfig, ConflictStrategy, LogEvent, ProgressEvent, ProfileRecord } from "@/lib/types";
 import {
   startMigration,
   cancelMigration,
   onMigrationProgress,
   onMigrationLog,
+  getProfiles,
 } from "@/lib/tauri";
 
 const INITIAL_SOURCE: BucketConfig = {
@@ -56,8 +58,23 @@ export default function Home() {
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [isMigrating, setIsMigrating] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapCount, setSwapCount] = useState(0);
+
+  // Load profiles from SQLite database on mount
+  useEffect(() => {
+    const loadStoredProfiles = async () => {
+      try {
+        const list = await getProfiles();
+        setProfiles(list);
+      } catch (err) {
+        console.error("Gagal membaca profil dari SQLite:", err);
+      }
+    };
+    loadStoredProfiles();
+  }, []);
 
   // Sync theme with HTML class & localStorage
   useEffect(() => {
@@ -231,6 +248,26 @@ export default function Home() {
               <span>TLS Encrypted</span>
             </div>
 
+            {/* Manage Credential Profiles Button */}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              title="Kelola Profil Kredensial SQLite"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold shadow-sm transition ${
+                isProfileModalOpen
+                  ? "border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                  : "border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-200 hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-zinc-800/80"
+              }`}
+            >
+              <Database className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+              <span>Profil Kredensial</span>
+              {profiles.length > 0 && (
+                <span className="ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 font-mono font-bold">
+                  {profiles.length}
+                </span>
+              )}
+            </button>
+
             {/* Settings Drawer Button */}
             <button
               type="button"
@@ -277,6 +314,8 @@ export default function Home() {
             side="source"
             config={sourceConfig}
             onChange={setSourceConfig}
+            profiles={profiles}
+            onOpenProfileManager={() => setIsProfileModalOpen(true)}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-left ring-2 ring-blue-500/50" : "transition-all duration-300"}
           />
@@ -307,6 +346,8 @@ export default function Home() {
             side="target"
             config={targetConfig}
             onChange={setTargetConfig}
+            profiles={profiles}
+            onOpenProfileManager={() => setIsProfileModalOpen(true)}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-right ring-2 ring-emerald-500/50" : "transition-all duration-300"}
           />
@@ -415,6 +456,37 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Profile Management Modal (SQLite) */}
+      <ProfileManagerModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onProfilesUpdated={(updated) => setProfiles(updated)}
+        onSelectForSource={(p) => {
+          setSourceConfig((prev) => ({
+            ...prev,
+            endpoint_url: p.endpoint_url,
+            region: p.region,
+            access_key_id: p.access_key_id,
+            secret_access_key: p.secret_access_key,
+            bucket_name: p.bucket_name || prev.bucket_name,
+            prefix: p.prefix || prev.prefix,
+            use_path_style: p.use_path_style,
+          }));
+        }}
+        onSelectForTarget={(p) => {
+          setTargetConfig((prev) => ({
+            ...prev,
+            endpoint_url: p.endpoint_url,
+            region: p.region,
+            access_key_id: p.access_key_id,
+            secret_access_key: p.secret_access_key,
+            bucket_name: p.bucket_name || prev.bucket_name,
+            prefix: p.prefix || prev.prefix,
+            use_path_style: p.use_path_style,
+          }));
+        }}
+      />
     </div>
   );
 }

@@ -34,3 +34,29 @@ export interface LogEvent {
   level: "info" | "warn" | "error" | "success";
   message: string;
 }
+
+export interface ProfileRecord {
+  id: string;
+  name: string;
+  endpoint_url: string;
+  region: string;
+  access_key_id: string;
+  secret_access_key: string;
+  bucket_name: string;
+  prefix: string;
+  use_path_style: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileInput {
+  id?: string;
+  name: string;
+  endpoint_url: string;
+  region: string;
+  access_key_id: string;
+  secret_access_key: string;
+  bucket_name?: string;
+  prefix?: string;
+  use_path_style?: boolean;
+}
