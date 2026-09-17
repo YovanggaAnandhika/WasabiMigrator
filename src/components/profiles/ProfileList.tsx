@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Database, Plus, Upload, Loader2, FileDown, Trash2 } from "lucide-react";
+import { Database, Plus, Upload, Loader2, FileDown, Trash2, Copy } from "lucide-react";
 import { ProfileRecord, ProfileInput } from "@/lib/types";
 
 interface ProfileListProps {
@@ -9,6 +9,7 @@ interface ProfileListProps {
   selectedProfileId: string | null;
   loading: boolean;
   onSelectProfile: (profile: ProfileRecord) => void;
+  onCloneProfile: (profile: ProfileRecord) => void;
   onStartAdd: () => void;
   onOpenImportCSV: () => void;
   onExportCSV: (profile: ProfileRecord | ProfileInput) => void;
@@ -20,6 +21,7 @@ export const ProfileList: React.FC<ProfileListProps> = ({
   selectedProfileId,
   loading,
   onSelectProfile,
+  onCloneProfile,
   onStartAdd,
   onOpenImportCSV,
   onExportCSV,
@@ -101,8 +103,19 @@ export const ProfileList: React.FC<ProfileListProps> = ({
                     </p>
                   </div>
 
-                  {/* Card Action Icons (Export CSV & Delete) */}
+                  {/* Card Action Icons (Clone, Export CSV & Delete) */}
                   <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloneProfile(p);
+                      }}
+                      title="Clone / Duplikasi profil ini"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -110,7 +123,7 @@ export const ProfileList: React.FC<ProfileListProps> = ({
                         onExportCSV(p);
                       }}
                       title="Export profil ini ke file CSV"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition"
                     >
                       <FileDown className="h-3.5 w-3.5" />
                     </button>

@@ -125,6 +125,29 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     setStatusMessage(null);
   };
 
+  const handleCloneProfile = (p: ProfileRecord) => {
+    setSelectedProfileId(null);
+    setFormData({
+      id: undefined, // Cleared ID creates a new record in SQLite on save
+      name: `${p.name} (Copy)`,
+      endpoint_url: p.endpoint_url,
+      region: p.region,
+      access_key_id: p.access_key_id,
+      secret_access_key: p.secret_access_key,
+      bucket_name: p.bucket_name,
+      prefix: p.prefix,
+      use_path_style: p.use_path_style,
+    });
+    setIsEditing(false); // Treated as new entry
+    setIsFormOpen(true);
+    setTestResult(null);
+    setErrorMessage(null);
+    setStatusMessage({
+      text: `Profil '${p.name}' berhasil di-clone! Silakan sesuaikan nama/bucket lalu klik 'Simpan Profil ke DB'.`,
+      type: "success",
+    });
+  };
+
   const handleTestConnection = async () => {
     if (!formData.endpoint_url || !formData.bucket_name) {
       alert("Harap isi Endpoint URL dan Bucket Name sebelum melakukan tes!");
@@ -170,25 +193,6 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     setSaving(true);
     setStatusMessage(null);
     try {
-      if (!formData.id) {
-        const duplicate = profiles.find(
-          (p) =>
-            p.endpoint_url.trim().toLowerCase() === formData.endpoint_url.trim().toLowerCase() &&
-            p.access_key_id.trim() === formData.access_key_id.trim()
-        );
-
-        if (duplicate) {
-          const confirmOverwrite = confirm(
-            `Kredensial ini sudah tersimpan dalam profil '${duplicate.name}'.\nApakah Anda ingin menimpa (update) profil yang sudah ada tersebut?`
-          );
-          if (!confirmOverwrite) {
-            setSaving(false);
-            return;
-          }
-          formData.id = duplicate.id;
-        }
-      }
-
       const saved = await saveProfile(formData);
       setStatusMessage({ text: `Profil '${saved.name}' berhasil disimpan ke SQLite!`, type: "success" });
       await fetchProfiles();
@@ -370,6 +374,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             selectedProfileId={selectedProfileId}
             loading={loading}
             onSelectProfile={handleSelectProfile}
+            onCloneProfile={handleCloneProfile}
             onStartAdd={handleStartAdd}
             onOpenImportCSV={() => fileInputRef.current?.click()}
             onExportCSV={exportProfileToCSV}
