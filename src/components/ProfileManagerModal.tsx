@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Plus,
@@ -21,6 +21,8 @@ import {
   FileCheck2,
   HardDrive,
   Folder,
+  Upload,
+  FileUp,
 } from "lucide-react";
 import { ProfileInput, ProfileRecord, TestResult } from "@/lib/types";
 import {
@@ -177,6 +179,26 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     setSaving(true);
     setStatusMessage(null);
     try {
+      // Check if saving a new profile that duplicates an existing profile's credentials
+      if (!formData.id) {
+        const duplicate = profiles.find(
+          (p) =>
+            p.endpoint_url.trim().toLowerCase() === formData.endpoint_url.trim().toLowerCase() &&
+            p.access_key_id.trim() === formData.access_key_id.trim()
+        );
+
+        if (duplicate) {
+          const confirmOverwrite = confirm(
+            `Kredensial ini sudah tersimpan dalam profil '${duplicate.name}'.\nApakah Anda ingin menimpa (update) profil yang sudah ada tersebut?`
+          );
+          if (!confirmOverwrite) {
+            setSaving(false);
+            return;
+          }
+          formData.id = duplicate.id;
+        }
+      }
+
       const saved = await saveProfile(formData);
       setStatusMessage({ text: `Profil '${saved.name}' berhasil disimpan ke SQLite!`, type: "success" });
       await fetchProfiles();
@@ -187,6 +209,176 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Import credentials from Wasabi / AWS CSV with duplicate check
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+      if (lines.length === 0) {
+        alert("File CSV kosong.");
+        return;
+      }
+
+      const parseCSVLine = (line: string): string[] => {
+        let delimiter = ",";
+        if (line.includes(";") && !line.includes(",")) delimiter = ";";
+        else if (line.includes("\t")) delimiter = "\t";
+
+        const result: string[] = [];
+        let current = "";
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' || char === "'") {
+            inQuotes = !inQuotes;
+          } else if (char === delimiter && !inQuotes) {
+            result.push(current.trim().replace(/^["']|["']$/g, ""));
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim().replace(/^["']|["']$/g, ""));
+        return result;
+      };
+
+      let accessKey = "";
+      let secretKey = "";
+      let endpoint = formData.endpoint_url || "https://s3.ap-southeast-1.wasabisys.com";
+      let region = formData.region || "ap-southeast-1";
+      let bucketName = formData.bucket_name || "";
+      let profileName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+
+      if (lines.length === 1 && (lines[0].includes("=") || lines[0].includes(":"))) {
+        const parts = lines[0].split(/[;,]/);
+        for (const part of parts) {
+          const [k, v] = part.split(/[=:]/);
+          if (k && v) {
+            const keyLower = k.toLowerCase().trim();
+            const valClean = v.trim().replace(/^["']|["']$/g, "");
+            if (keyLower.includes("access") && !keyLower.includes("secret")) accessKey = valClean;
+            if (keyLower.includes("secret")) secretKey = valClean;
+          }
+        }
+      } else {
+        const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
+        const dataRows = lines.slice(1).map(parseCSVLine);
+        const firstData = dataRows[0] || [];
+
+        headers.forEach((h, idx) => {
+          const val = firstData[idx] || "";
+          if ((h.includes("access key") || h.includes("access_key") || h === "accesskeyid" || h === "accesskey") && !h.includes("secret")) {
+            accessKey = val;
+          } else if (h.includes("secret access key") || h.includes("secret_key") || h.includes("secret key") || h === "secretaccesskey" || h === "secretkey") {
+            secretKey = val;
+          } else if (h.includes("endpoint") || h.includes("host")) {
+            endpoint = val;
+          } else if (h.includes("region")) {
+            region = val;
+          } else if (h.includes("bucket")) {
+            bucketName = val;
+          } else if (h.includes("user name") || h.includes("username") || h.includes("profile")) {
+            if (val) profileName = val;
+          }
+        });
+
+        if (!accessKey && !secretKey) {
+          if (firstData.length >= 3) {
+            profileName = firstData[0] || profileName;
+            accessKey = firstData[1];
+            secretKey = firstData[2];
+          } else if (firstData.length === 2) {
+            accessKey = firstData[0];
+            secretKey = firstData[1];
+          }
+        }
+      }
+
+      if (!accessKey || !secretKey) {
+        alert("Gagal membaca Access Key ID atau Secret Key dari CSV.");
+        return;
+      }
+
+      // Check if credentials already exist in SQLite
+      const existingMatch = profiles.find(
+        (p) =>
+          p.access_key_id.trim() === accessKey.trim() &&
+          p.endpoint_url.trim().toLowerCase() === endpoint.trim().toLowerCase()
+      );
+
+      let targetId: string | undefined = undefined;
+
+      if (existingMatch) {
+        const shouldOverwrite = confirm(
+          `Kredensial dari file CSV sama persis dengan profil yang sudah ada ('${existingMatch.name}').\n\nApakah Anda ingin menimpa (overwrite) profil tersebut?`
+        );
+        if (!shouldOverwrite) {
+          // User chose not to overwrite: fill form for creating as a new copy
+          setFormData({
+            name: `${profileName} (Copy)`,
+            endpoint_url: endpoint,
+            region,
+            access_key_id: accessKey,
+            secret_access_key: secretKey,
+            bucket_name: bucketName,
+            prefix: "",
+            use_path_style: true,
+          });
+          setIsEditing(false);
+          setStatusMessage({
+            text: "Kredensial diisi ke formulir. Silakan sesuaikan nama profil sebelum menyimpan.",
+            type: "success",
+          });
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          return;
+        }
+        targetId = existingMatch.id;
+        profileName = existingMatch.name;
+      }
+
+      // Automatically save imported profile to SQLite
+      try {
+        setSaving(true);
+        const saved = await saveProfile({
+          id: targetId,
+          name: profileName,
+          endpoint_url: endpoint,
+          region,
+          access_key_id: accessKey,
+          secret_access_key: secretKey,
+          bucket_name: bucketName,
+          prefix: "",
+          use_path_style: true,
+        });
+
+        await fetchProfiles();
+        handleSelectProfile(saved);
+        setStatusMessage({
+          text: targetId
+            ? `Profil '${saved.name}' berhasil ditimpa dari file CSV!`
+            : `Profil baru '${saved.name}' berhasil diimpor dari CSV ke SQLite!`,
+          type: "success",
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        alert(`Gagal menyimpan profil CSV: ${msg}`);
+      } finally {
+        setSaving(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -247,22 +439,42 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
           </button>
         </div>
 
+        {/* Hidden file input for CSV Import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleImportCSV}
+          className="hidden"
+        />
+
         {/* Modal Body: Left side Profiles List, Right side Profile Editor Form */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Left Panel: List of Profiles (Width ~ 38%) */}
           <div className="w-full md:w-[38%] border-r border-slate-200 dark:border-zinc-800 flex flex-col min-h-0 bg-slate-50/30 dark:bg-zinc-950/40">
-            <div className="p-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+            <div className="p-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-1.5 flex-wrap">
               <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                Daftar Profil Tersimpan ({profiles.length})
+                Profil ({profiles.length})
               </span>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Tambah Profil</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Import kredensial dari file CSV (Wasabi / AWS standard)"
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-xs transition"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Import CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Tambah</span>
+                </button>
+              </div>
             </div>
 
             {/* Profiles Scroll Area */}

@@ -264,18 +264,6 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             <span>Export CSV</span>
           </button>
 
-          {/* Import CSV button */}
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => fileInputRef.current?.click()}
-            title="Import kredensial dari file CSV Wasabi / AWS"
-            className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/70 text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 shadow-xs transition disabled:opacity-40"
-          >
-            <Upload className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-            <span>Import CSV</span>
-          </button>
-
           <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 dark:text-zinc-400 mx-1">|</span>
 
           {PRESETS.slice(0, 3).map((p) => (
