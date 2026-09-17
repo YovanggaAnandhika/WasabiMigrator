@@ -108,14 +108,37 @@ export const BucketCard: React.FC<BucketCardProps> = ({
       const text = event.target?.result as string;
       if (!text) return;
 
-      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-      if (lines.length < 2) {
-        alert("File CSV tidak memiliki data baris kredensial yang valid.");
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+      if (lines.length === 0) {
+        alert("File CSV kosong.");
         return;
       }
 
-      const headers = lines[0].split(",").map((h) => h.replace(/["']/g, "").trim().toLowerCase());
-      const values = lines[1].split(",").map((v) => v.replace(/["']/g, "").trim());
+      // Helper to parse a delimited line handling quotes and commas/semicolons/tabs
+      const parseCSVLine = (line: string): string[] => {
+        // Check delimiter: comma, semicolon, or tab
+        let delimiter = ",";
+        if (line.includes(";") && !line.includes(",")) delimiter = ";";
+        else if (line.includes("\t")) delimiter = "\t";
+
+        const result: string[] = [];
+        let current = "";
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' || char === "'") {
+            inQuotes = !inQuotes;
+          } else if (char === delimiter && !inQuotes) {
+            result.push(current.trim().replace(/^["']|["']$/g, ""));
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim().replace(/^["']|["']$/g, ""));
+        return result;
+      };
 
       let accessKey = "";
       let secretKey = "";
@@ -123,23 +146,51 @@ export const BucketCard: React.FC<BucketCardProps> = ({
       let region = config.region;
       let bucketName = config.bucket_name;
 
-      headers.forEach((h, idx) => {
-        const val = values[idx] || "";
-        if (h.includes("access key id") || h.includes("access key") || h === "accesskey") {
-          accessKey = val;
-        } else if (h.includes("secret access key") || h.includes("secret key") || h === "secretkey") {
-          secretKey = val;
-        } else if (h.includes("endpoint") || h.includes("host")) {
-          endpoint = val;
-        } else if (h.includes("region")) {
-          region = val;
-        } else if (h.includes("bucket")) {
-          bucketName = val;
+      // Handle Key=Value format or 2-row table format
+      if (lines.length === 1 && (lines[0].includes("=") || lines[0].includes(":"))) {
+        const parts = lines[0].split(/[;,]/);
+        for (const part of parts) {
+          const [k, v] = part.split(/[=:]/);
+          if (k && v) {
+            const keyLower = k.toLowerCase().trim();
+            const valClean = v.trim().replace(/^["']|["']$/g, "");
+            if (keyLower.includes("access") && !keyLower.includes("secret")) accessKey = valClean;
+            if (keyLower.includes("secret")) secretKey = valClean;
+          }
         }
-      });
+      } else {
+        const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
+        const dataRows = lines.slice(1).map(parseCSVLine);
+        const firstData = dataRows[0] || [];
 
-      if (!accessKey && values[1]) accessKey = values[1];
-      if (!secretKey && values[2]) secretKey = values[2];
+        headers.forEach((h, idx) => {
+          const val = firstData[idx] || "";
+          if ((h.includes("access key") || h.includes("access_key") || h === "accesskeyid" || h === "accesskey") && !h.includes("secret")) {
+            accessKey = val;
+          } else if (h.includes("secret access key") || h.includes("secret_key") || h.includes("secret key") || h === "secretaccesskey" || h === "secretkey") {
+            secretKey = val;
+          } else if (h.includes("endpoint") || h.includes("host")) {
+            endpoint = val;
+          } else if (h.includes("region")) {
+            region = val;
+          } else if (h.includes("bucket")) {
+            bucketName = val;
+          }
+        });
+
+        // Fallback for headerless or standard Wasabi CSV (User Name, Access Key Id, Secret Access Key)
+        if (!accessKey && !secretKey) {
+          if (firstData.length >= 3) {
+            // Wasabi format: [User Name, Access Key Id, Secret Access Key]
+            accessKey = firstData[1];
+            secretKey = firstData[2];
+          } else if (firstData.length === 2) {
+            // [Access Key, Secret Key]
+            accessKey = firstData[0];
+            secretKey = firstData[1];
+          }
+        }
+      }
 
       onChange({
         ...config,
