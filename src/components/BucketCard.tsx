@@ -221,34 +221,35 @@ export const BucketCard: React.FC<BucketCardProps> = ({
           </div>
         </div>
 
-        {/* Bucket Name & Prefix */}
+        {/* Bucket Name & Prefix (Editable per migration task) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           <div>
             <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 mb-1">
               <Server className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400" />
-              Target Bucket Name
+              <span>{isSource ? "Source Bucket Name" : "Target Bucket Name"}</span>
+              <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              readOnly
-              tabIndex={-1}
-              placeholder="(Ditentukan dari profil)"
+              disabled={disabled}
+              placeholder="Masukkan nama bucket..."
               value={config.bucket_name}
-              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
+              onChange={(e) => onChange({ ...config, bucket_name: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition shadow-xs"
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 mb-1">
               <FolderTree className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400" />
-              Prefix / Folder
+              Prefix / Folder (Opsional)
             </label>
             <input
               type="text"
-              readOnly
-              tabIndex={-1}
-              placeholder="-"
-              value={config.prefix || "(Root / Semua file)"}
-              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
+              disabled={disabled}
+              placeholder="folder/subfolder/ (opsional)"
+              value={config.prefix}
+              onChange={(e) => onChange({ ...config, prefix: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition shadow-xs"
             />
           </div>
         </div>

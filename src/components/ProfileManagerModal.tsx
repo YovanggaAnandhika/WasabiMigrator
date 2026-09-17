@@ -176,6 +176,10 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
       alert("Endpoint URL, Access Key, dan Secret Key wajib diisi!");
       return;
     }
+    if (!formData.bucket_name?.trim()) {
+      alert("Nama Bucket wajib diisi di profil!");
+      return;
+    }
 
     setSaving(true);
     setStatusMessage(null);
@@ -773,16 +777,17 @@ export const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                   </div>
                 </div>
 
-                {/* Default Bucket Name & Prefix */}
+                {/* Bucket Name & Prefix */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Target Bucket Name (Opsional)
+                      Bucket Name <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Folder className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       <input
                         type="text"
+                        required
                         placeholder="contoh: production-backups"
                         value={formData.bucket_name || ""}
                         onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
