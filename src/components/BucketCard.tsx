@@ -156,11 +156,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="https://s3.ap-southeast-1.wasabisys.com"
+              readOnly
+              tabIndex={-1}
+              placeholder="Pilih dari Profil Kredensial..."
               value={config.endpoint_url}
-              onChange={(e) => onChange({ ...config, endpoint_url: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
           <div>
@@ -170,11 +170,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="ap-southeast-1"
+              readOnly
+              tabIndex={-1}
+              placeholder="-"
               value={config.region}
-              onChange={(e) => onChange({ ...config, region: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
         </div>
@@ -188,11 +188,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="AKIA..."
+              readOnly
+              tabIndex={-1}
+              placeholder="Pilih profil untuk memuat..."
               value={config.access_key_id}
-              onChange={(e) => onChange({ ...config, access_key_id: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
           <div>
@@ -212,11 +212,11 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </label>
             <input
               type={showSecret ? "text" : "password"}
-              disabled={disabled}
+              readOnly
+              tabIndex={-1}
               placeholder="••••••••••••••••••••"
               value={config.secret_access_key}
-              onChange={(e) => onChange({ ...config, secret_access_key: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
         </div>
@@ -230,25 +230,25 @@ export const BucketCard: React.FC<BucketCardProps> = ({
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="my-bucket-name"
+              readOnly
+              tabIndex={-1}
+              placeholder="(Ditentukan dari profil)"
               value={config.bucket_name}
-              onChange={(e) => onChange({ ...config, bucket_name: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 mb-1">
               <FolderTree className="h-3.5 w-3.5 text-slate-500 dark:text-zinc-400" />
-              Prefix / Folder (Opsional)
+              Prefix / Folder
             </label>
             <input
               type="text"
-              disabled={disabled}
-              placeholder="folder/subfolder/ (optional)"
-              value={config.prefix}
-              onChange={(e) => onChange({ ...config, prefix: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-950/60 px-3 py-2 text-xs font-mono text-slate-900 dark:text-zinc-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:border-blue-500/70 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition"
+              readOnly
+              tabIndex={-1}
+              placeholder="-"
+              value={config.prefix || "(Root / Semua file)"}
+              className="w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-100/70 dark:bg-zinc-950/70 px-3 py-2 text-xs font-mono text-slate-700 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 cursor-default select-all focus:outline-none transition"
             />
           </div>
         </div>
