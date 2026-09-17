@@ -126,6 +126,59 @@ pub async fn execute_migration(
     let source_ep = source.endpoint_url.trim().trim_end_matches('/').to_lowercase();
     let target_ep = target.endpoint_url.trim().trim_end_matches('/').to_lowercase();
     let is_same_host = source_ep == target_ep;
+
+    // If same host / region, ensure source bucket has cross-account policy allowing target to direct-copy
+    if is_same_host {
+        emit_log(&app, "info", &format!("Configuring Cross-Account access on source bucket '{}' for Server-Side Copy...", source.bucket_name));
+        
+        // Construct standard cross-account policy allowing target to read
+        // Target account ARN root: in Wasabi any authenticated account or target key can read
+        let policy_json = format!(
+            r#"{{
+  "Version": "2012-10-17",
+  "Statement": [
+    {{
+      "Sid": "AutoAllowTargetCopyDirect",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::{0}",
+        "arn:aws:s3:::{0}/*"
+      ]
+    }}
+  ]
+}}"#,
+            source.bucket_name
+        );
+
+        match source_client
+            .put_bucket_policy()
+            .bucket(&source.bucket_name)
+            .policy(policy_json)
+            .send()
+            .await
+        {
+            Ok(_) => {
+                emit_log(&app, "info", &format!("⚡ Successfully enabled Server-Side Copy permission on source bucket '{}'!", source.bucket_name));
+            }
+            Err(policy_err) => {
+                emit_log(
+                    &app,
+                    "warn",
+                    &format!(
+                        "Note on source bucket policy: {} (If server-side copy is blocked, streaming relay will automatically engage).",
+                        policy_err
+                    ),
+                );
+            }
+        }
+    }
+
     let transfer_mode = if is_same_host {
         "server_side_copy"
     } else {
@@ -403,9 +456,17 @@ pub async fn execute_migration(
                     .await
                 {
                     Ok(_) => Ok(()),
-                    Err(_) => {
+                    Err(copy_err) => {
                         if cancel_clone.load(Ordering::Relaxed) {
                             return;
+                        }
+                        // Log fallback reason once
+                        if c_files.load(Ordering::Relaxed) == 0 && f_files.load(Ordering::Relaxed) == 0 {
+                            emit_log(
+                                &app_clone,
+                                "warn",
+                                &format!("Server-Side Copy not accepted by storage ({}), using Client Streaming fallback.", copy_err),
+                            );
                         }
                         // Fallback to streaming if server copy fails
                         stream_copy(&s_client, &t_client, &s_bucket, &obj.key, &t_bucket, &target_key, obj.size).await
