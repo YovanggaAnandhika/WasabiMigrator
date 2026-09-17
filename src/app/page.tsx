@@ -399,6 +399,16 @@ export default function Home() {
             config={sourceConfig}
             onChange={setSourceConfig}
             profiles={profiles}
+            onLog={(level, message) => {
+              setLogs((prev) => [
+                ...prev.slice(-499),
+                {
+                  timestamp: new Date().toLocaleTimeString(),
+                  level,
+                  message,
+                },
+              ]);
+            }}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-left ring-2 ring-blue-500/50" : "transition-all duration-300"}
           />
@@ -430,6 +440,16 @@ export default function Home() {
             config={targetConfig}
             onChange={setTargetConfig}
             profiles={profiles}
+            onLog={(level, message) => {
+              setLogs((prev) => [
+                ...prev.slice(-499),
+                {
+                  timestamp: new Date().toLocaleTimeString(),
+                  level,
+                  message,
+                },
+              ]);
+            }}
             disabled={isMigrating || isSwapping}
             className={isSwapping ? "animate-swap-right ring-2 ring-emerald-500/50" : "transition-all duration-300"}
           />
