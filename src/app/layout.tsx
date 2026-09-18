@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Wasabi & S3 Bucket Migration Tool",
   description: "High-performance S3 and Wasabi bucket migration with Server-Side Copy and Streaming Relay",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
