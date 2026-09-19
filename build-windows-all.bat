@@ -5,19 +5,26 @@ echo ============================================
 echo   Wasabi Migrator - Multi-Arch Build
 echo ============================================
 
+:: Detect CARGO_TARGET_DIR (custom) or default
+if defined CARGO_TARGET_DIR (
+    set TARGET_BASE=%CARGO_TARGET_DIR%
+) else (
+    set TARGET_BASE=src-tauri\target
+)
+echo Target dir: %TARGET_BASE%
+
 :: Output folder
 set DIST=dist
 if not exist %DIST% mkdir %DIST%
 
-:: Get version from tauri.conf.json (simple grep)
-for /f "tokens=2 delims=:," %%a in ('findstr /i "version" src-tauri\tauri.conf.json') do (
+:: Get version from tauri.conf.json
+for /f "tokens=2 delims=:," %%a in ('findstr /i "\"version\"" src-tauri\tauri.conf.json') do (
     set RAW_VER=%%a
     goto :got_ver
 )
 :got_ver
 set VERSION=%RAW_VER: =%
 set VERSION=%VERSION:"=%
-
 echo Version: %VERSION%
 echo.
 
@@ -32,17 +39,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Copy ARM64 output to dist/
-set ARM64_SRC=src-tauri\target\aarch64-pc-windows-msvc\release\bundle
-for %%f in (%ARM64_SRC%\nsis\*.exe) do (
-    echo Copying: %%~nxf -^> wasabi-migrator_%VERSION%_arm64-setup.exe
+set ARM64_BUNDLE=%TARGET_BASE%\aarch64-pc-windows-msvc\release\bundle
+echo Collecting ARM64 from: %ARM64_BUNDLE%
+
+for %%f in ("%ARM64_BUNDLE%\nsis\*.exe") do (
+    echo   %%~nxf -^> wasabi-migrator_%VERSION%_arm64-setup.exe
     copy "%%f" "%DIST%\wasabi-migrator_%VERSION%_arm64-setup.exe" >nul
 )
-for %%f in (%ARM64_SRC%\msi\*.msi) do (
-    echo Copying: %%~nxf -^> wasabi-migrator_%VERSION%_arm64.msi
+for %%f in ("%ARM64_BUNDLE%\msi\*.msi") do (
+    echo   %%~nxf -^> wasabi-migrator_%VERSION%_arm64.msi
     copy "%%f" "%DIST%\wasabi-migrator_%VERSION%_arm64.msi" >nul
 )
-
 echo ARM64 done.
 echo.
 
@@ -57,17 +64,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Copy x64 output to dist/
-set X64_SRC=src-tauri\target\x86_64-pc-windows-msvc\release\bundle
-for %%f in (%X64_SRC%\nsis\*.exe) do (
-    echo Copying: %%~nxf -^> wasabi-migrator_%VERSION%_x64-setup.exe
+set X64_BUNDLE=%TARGET_BASE%\x86_64-pc-windows-msvc\release\bundle
+echo Collecting x64 from: %X64_BUNDLE%
+
+for %%f in ("%X64_BUNDLE%\nsis\*.exe") do (
+    echo   %%~nxf -^> wasabi-migrator_%VERSION%_x64-setup.exe
     copy "%%f" "%DIST%\wasabi-migrator_%VERSION%_x64-setup.exe" >nul
 )
-for %%f in (%X64_SRC%\msi\*.msi) do (
-    echo Copying: %%~nxf -^> wasabi-migrator_%VERSION%_x64.msi
+for %%f in ("%X64_BUNDLE%\msi\*.msi") do (
+    echo   %%~nxf -^> wasabi-migrator_%VERSION%_x64.msi
     copy "%%f" "%DIST%\wasabi-migrator_%VERSION%_x64.msi" >nul
 )
-
 echo x64 done.
 echo.
 
@@ -77,6 +84,6 @@ echo.
 echo ============================================
 echo   Build Complete! Output in .\dist\
 echo ============================================
-dir /b %DIST%
+dir /b "%DIST%"
 
 endlocal
