@@ -25,9 +25,12 @@ tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
-aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
+aws-config = { version = "1.5", default-features = false, features = ["behavior-version-latest", "rustls"] }
+aws-sdk-s3 = { version = "1.5", default-features = false, features = ["rt-tokio", "rustls"] }
 aws-credential-types = "1"
 aws-types = "1"
+# Pin smithy-json to >=0.63.1 which supports the DocumentObject type (0.63.0 is broken)
+aws-smithy-json = ">=0.63.1"
 futures-util = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 urlencoding = "2.1"

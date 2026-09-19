@@ -12,7 +12,7 @@ use crate::models::{ProfileInput, ProfileRecord};
 /// Resolve database path:
 /// In dev/debug mode (`bun tauri dev`): stores in `src-tauri/database/dka.db`
 /// In release/compile mode: stores in OS AppData directory (`dka.db`)
-pub fn get_db_path(_app: &AppHandle) -> Result<PathBuf, String> {
+pub fn get_db_path(app: &AppHandle) -> Result<PathBuf, String> {
     #[cfg(debug_assertions)]
     {
         // When running in dev mode via `bun tauri dev` or `cargo tauri dev`

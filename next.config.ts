@@ -5,7 +5,7 @@ import fs from "node:fs";
 // where libuv/Windows returns EISDIR instead of EINVAL when calling readlink on normal files/folders
 try {
   const patchError = (err: any, path: any) => {
-    if (err && (err.code === "EISDIR" || err.code === "UNKNOWN" || err.message?.includes("EISDIR"))) {
+    if (err && (err.code === "EISDIR" || err.code === "UNKNOWN" || err.code === "EUNKNOWN" || err.errno === -4094 || err.message?.includes("EISDIR") || err.message?.includes("EUNKNOWN"))) {
       const einval: any = new Error(`EINVAL: invalid argument, readlink '${path}'`);
       einval.code = "EINVAL";
       einval.errno = -22;
